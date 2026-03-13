@@ -24,7 +24,6 @@
       "ext-fileinfo": "*",
       "ext-gd": "*",
       "ext-json": "*",
-      "ext-pdo_sqlite": "*",
       "ext-simplexml": "*",
       "ext-zip": "*",
     "mk-j/php_xlsxwriter": "0.39",
@@ -65,6 +64,7 @@
       "chat": "https://discord.gg/qKm7j9AaJT"
     },
     "suggest": {
+      "ext-pdo_sqlite": "Required to use SQLite databases.",
       "ext-mysqli": "Required to use MySQL databases.",
       "ext-pgsql": "Required to use PostgreSQL databases."
     },

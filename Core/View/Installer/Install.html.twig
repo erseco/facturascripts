@@ -235,7 +235,7 @@
                                              <i class="fa-solid fa-database"></i>
                                          </span>
                                          <input type="text" id="fs_db_name" name="fs_db_name" value="{{ fsc.db_name }}"
-                                                class="form-control" pattern="[A-Za-z0-9_./:-]+" required/>
+                                                class="form-control" pattern="(?!.*\.\.)[A-Za-z0-9_./:-]+" required/>
                                      </div>
                                  </div>
                              </div>

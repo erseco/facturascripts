@@ -106,7 +106,7 @@ class SqliteEngine extends DataBaseEngine
             return true;
         }
 
-        if ($dbType === 'integer' && (str_starts_with($xmlType, 'int') || $xmlType === 'boolean')) {
+        if ($dbType === 'integer' && (in_array($xmlType, ['int', 'integer', 'int2', 'int4', 'int8'], true) || $xmlType === 'boolean')) {
             return true;
         }
 
@@ -115,11 +115,11 @@ class SqliteEngine extends DataBaseEngine
         }
 
         if (str_starts_with($dbType, 'varchar(') && str_starts_with($xmlType, 'character varying(')) {
-            return substr($dbType, 8, -1) == substr($xmlType, 18, -1);
+            return substr($dbType, 8, -1) === substr($xmlType, 18, -1);
         }
 
         if (str_starts_with($dbType, 'character varying(') && str_starts_with($xmlType, 'character varying(')) {
-            return substr($dbType, 18, -1) == substr($xmlType, 18, -1);
+            return substr($dbType, 18, -1) === substr($xmlType, 18, -1);
         }
 
         return false;
@@ -257,8 +257,16 @@ class SqliteEngine extends DataBaseEngine
             return Tools::folder('MyFiles', 'facturascripts.sqlite');
         }
 
-        if ($database === ':memory:' || DIRECTORY_SEPARATOR === $database[0] || preg_match('/^[A-Za-z]:[\\\\\\/]/', $database)) {
+        if (strpos($database, "\0") !== false) {
+            throw new KernelException('DatabaseError', 'Invalid SQLite database path.');
+        }
+
+        if ($database === ':memory:' || str_starts_with($database, DIRECTORY_SEPARATOR) || preg_match('/^[A-Za-z]:[\\\\\\/]/', $database)) {
             return $database;
+        }
+
+        if (str_contains($database, '..')) {
+            throw new KernelException('DatabaseError', 'Invalid SQLite database path.');
         }
 
         return FS_FOLDER . DIRECTORY_SEPARATOR . ltrim($database, DIRECTORY_SEPARATOR);

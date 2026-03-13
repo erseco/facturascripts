@@ -214,7 +214,11 @@ class SqliteQueries implements DataBaseQueries
                 continue;
             }
 
-            if (false !== strpos($value, 'primary key') || false !== strpos($value, 'unique') || Tools::config('db_foreign_keys', true)) {
+            if (
+                false !== strpos($value, 'primary key') ||
+                false !== strpos($value, 'unique') ||
+                (false !== strpos($value, 'foreign key') && Tools::config('db_foreign_keys', true))
+            ) {
                 $sql .= ', CONSTRAINT ' . $res['name'] . ' ' . $res['constraint'];
             }
         }

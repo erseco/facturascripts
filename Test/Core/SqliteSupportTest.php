@@ -101,6 +101,7 @@ final class SqliteSupportTest extends TestCase
 
         return $this->db;
     }
+
     protected function tearDown(): void
     {
         $this->logErrors();
