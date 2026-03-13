@@ -132,7 +132,7 @@ class SqliteEngine extends DataBaseEngine
             throw new KernelException('DatabaseError', $error);
         }
 
-        $database = $this->getDatabasePath(Tools::config('db_name'));
+        $database = self::getDatabasePath(Tools::config('db_name'));
         $directory = dirname($database);
         if ($database !== ':memory:' && false === is_dir($directory) && false === @mkdir($directory, 0755, true)) {
             $error = 'Unable to create SQLite directory: ' . $directory;
@@ -192,6 +192,18 @@ class SqliteEngine extends DataBaseEngine
         $this->lastErrorMsg = '';
 
         try {
+            $sql = trim($sql);
+            if ($sql === '') {
+                return true;
+            }
+
+            // si no hay punto y coma interior, ejecutamos directamente
+            $stripped = rtrim($sql, '; ');
+            if (strpos($stripped, ';') === false) {
+                $link->exec($stripped);
+                return true;
+            }
+
             foreach ($this->splitStatements($sql) as $statement) {
                 if ($statement === '') {
                     continue;
@@ -251,7 +263,7 @@ class SqliteEngine extends DataBaseEngine
         return empty($data) ? 'SQLITE' : 'SQLITE ' . $data[0]['version'];
     }
 
-    private function getDatabasePath(?string $database): string
+    public static function getDatabasePath(?string $database): string
     {
         if (empty($database)) {
             return Tools::folder('MyFiles', 'facturascripts.sqlite');

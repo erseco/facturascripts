@@ -28,6 +28,7 @@ use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Request;
 use FacturaScripts\Core\Tools;
+use FacturaScripts\Core\Base\DataBase\SqliteEngine;
 use mysqli;
 use PDO;
 
@@ -443,14 +444,11 @@ class Installer implements ControllerInterface
             return false;
         }
 
-        $database = $dbData['name'];
-        if (strpos($database, "\0") !== false || str_contains($database, '..')) {
-            Tools::log()->critical('Invalid SQLite database path.');
+        try {
+            $database = SqliteEngine::getDatabasePath($dbData['name']);
+        } catch (KernelException $e) {
+            Tools::log()->critical($e->getMessage());
             return false;
-        }
-
-        if ($database !== ':memory:' && false === preg_match('/^(\/|[A-Za-z]:[\\\\\\/])/', $database)) {
-            $database = FS_FOLDER . DIRECTORY_SEPARATOR . ltrim($database, DIRECTORY_SEPARATOR);
         }
 
         $directory = dirname($database);
