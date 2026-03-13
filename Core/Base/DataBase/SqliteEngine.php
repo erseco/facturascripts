@@ -293,11 +293,48 @@ class SqliteEngine extends DataBaseEngine
     private function splitStatements(string $sql): array
     {
         $statements = [];
-        foreach (explode(';', $sql) as $statement) {
-            $statement = trim($statement);
-            if ($statement !== '') {
-                $statements[] = $statement . ';';
+        $statement = '';
+        $inSingleQuote = false;
+        $inDoubleQuote = false;
+        $length = strlen($sql);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $sql[$i];
+            $statement .= $char;
+
+            if ($char === "'" && false === $inDoubleQuote) {
+                if ($inSingleQuote && $i + 1 < $length && $sql[$i + 1] === "'") {
+                    $statement .= $sql[++$i];
+                    continue;
+                }
+
+                $inSingleQuote = false === $inSingleQuote;
+                continue;
             }
+
+            if ($char === '"' && false === $inSingleQuote) {
+                if ($inDoubleQuote && $i + 1 < $length && $sql[$i + 1] === '"') {
+                    $statement .= $sql[++$i];
+                    continue;
+                }
+
+                $inDoubleQuote = false === $inDoubleQuote;
+                continue;
+            }
+
+            if ($char === ';' && false === $inSingleQuote && false === $inDoubleQuote) {
+                $statement = trim($statement);
+                if ($statement !== '') {
+                    $statements[] = $statement;
+                }
+
+                $statement = '';
+            }
+        }
+
+        $statement = trim($statement);
+        if ($statement !== '') {
+            $statements[] = $statement . ';';
         }
 
         return $statements;
