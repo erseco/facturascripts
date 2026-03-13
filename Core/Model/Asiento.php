@@ -172,12 +172,13 @@ class Asiento extends ModelClass
         }
 
         // add audit log
+        $modelCode = (string)$this->id();
         Tools::log(LogMessage::AUDIT_CHANNEL)->warning('deleted-model', [
             '%model%' => $this->modelClassName(),
-            '%key%' => $this->id(),
+            '%key%' => $modelCode,
             '%desc%' => $this->primaryDescription(),
             'model-class' => $this->modelClassName(),
-            'model-code' => $this->id(),
+            'model-code' => $modelCode,
             'model-data' => $this->toArray()
         ]);
 
@@ -342,12 +343,13 @@ class Asiento extends ModelClass
         }
 
         // add audit log
+        $modelCode = (string)$this->id();
         Tools::log(LogMessage::AUDIT_CHANNEL)->info('updated-model', [
             '%model%' => $this->modelClassName(),
-            '%key%' => $this->id(),
+            '%key%' => $modelCode,
             '%desc%' => $this->primaryDescription(),
             'model-class' => $this->modelClassName(),
-            'model-code' => $this->id(),
+            'model-code' => $modelCode,
             'model-data' => $this->toArray()
         ]);
 
