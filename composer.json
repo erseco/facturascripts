@@ -16,16 +16,18 @@
     },
     "process-timeout": 0
   },
-    "require": {
-      "php": ">=8.0",
-      "ext-bcmath": "*",
-      "ext-curl": "*",
-      "ext-dom": "*",
-      "ext-fileinfo": "*",
-      "ext-gd": "*",
-      "ext-json": "*",
-      "ext-simplexml": "*",
-      "ext-zip": "*",
+  "require": {
+    "php": ">=8.0",
+    "ext-bcmath": "*",
+    "ext-curl": "*",
+    "ext-dom": "*",
+    "ext-fileinfo": "*",
+    "ext-gd": "*",
+    "ext-json": "*",
+    "ext-mysqli": "*",
+    "ext-pgsql": "*",
+    "ext-simplexml": "*",
+    "ext-zip": "*",
     "mk-j/php_xlsxwriter": "0.39",
     "parsecsv/php-parsecsv": "1.*",
     "phpmailer/phpmailer": "6.*",
@@ -57,17 +59,12 @@
     "billing",
     "accounting"
   ],
-    "support": {
-      "issues": "https://facturascripts.com/crear-issue",
-      "source": "https://github.com/NeoRazorX/facturascripts",
-      "docs": "https://facturascripts.com/ayuda",
-      "chat": "https://discord.gg/qKm7j9AaJT"
-    },
-    "suggest": {
-      "ext-pdo_sqlite": "Required to use SQLite databases.",
-      "ext-mysqli": "Required to use MySQL databases.",
-      "ext-pgsql": "Required to use PostgreSQL databases."
-    },
+  "support": {
+    "issues": "https://facturascripts.com/crear-issue",
+    "source": "https://github.com/NeoRazorX/facturascripts",
+    "docs": "https://facturascripts.com/ayuda",
+    "chat": "https://discord.gg/qKm7j9AaJT"
+  },
   "funding": [
     {
       "type": "other",
