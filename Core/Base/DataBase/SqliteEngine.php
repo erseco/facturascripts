@@ -325,7 +325,7 @@ class SqliteEngine extends DataBaseEngine
             if ($char === ';' && false === $inSingleQuote && false === $inDoubleQuote) {
                 $statement = trim($statement);
                 if ($statement !== '') {
-                    $statements[] = $statement;
+                    $statements[] = rtrim($statement, ';');
                 }
 
                 $statement = '';
@@ -334,7 +334,7 @@ class SqliteEngine extends DataBaseEngine
 
         $statement = trim($statement);
         if ($statement !== '') {
-            $statements[] = $statement . ';';
+            $statements[] = rtrim($statement, ';');
         }
 
         return $statements;
