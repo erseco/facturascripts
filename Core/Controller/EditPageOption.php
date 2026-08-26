@@ -31,7 +31,7 @@ use FacturaScripts\Dinamic\Model\PageOption;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
- * Controlador para editar las opciones de visualización (columnas y filtros) de cualquier página.
+ * Edit option for any page.
  *
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  * @author Jose Antonio Cuello          <yopli2000@gmail.com>
@@ -169,21 +169,14 @@ class EditPageOption extends Controller
      */
     protected function loadPageOptions(): void
     {
-        // comprobamos si existen personalizaciones guardadas
-        $customized = $this->selectedUser ?
-            $this->loadPageOptionsForUser() :
-            $this->loadPageOptionsForAll();
-
-        // partimos de la estructura actual del XML y, si hay personalización, aplicamos sus cambios sobre ella
-        if ($customized) {
-            $custom = clone $this->model;
-            VisualItemLoadEngine::installXML($this->selectedViewName, $this->model);
-            VisualItemLoadEngine::mergeCustomization($this->model, $custom);
-        } else {
+        if ($this->selectedUser && false === $this->loadPageOptionsForUser()) {
             VisualItemLoadEngine::installXML($this->selectedViewName, $this->model);
         }
 
-        // creamos la estructura visual
+        if (empty($this->selectedUser) && false === $this->loadPageOptionsForAll()) {
+            VisualItemLoadEngine::installXML($this->selectedViewName, $this->model);
+        }
+
         VisualItemLoadEngine::loadArray($this->columns, $this->modals, $this->rows, $this->model);
     }
 

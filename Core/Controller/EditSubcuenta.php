@@ -31,7 +31,7 @@ use FacturaScripts\Dinamic\Model\Partida;
 use FacturaScripts\Dinamic\Model\Subcuenta;
 
 /**
- * Controlador para editar un único elemento del modelo Subcuenta
+ * Controller to edit a single item from the SubCuenta model
  *
  * @author Carlos García Gómez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
@@ -265,7 +265,7 @@ class EditSubcuenta extends EditController
 
     private function setLedgerReportExportOptions(string $viewName): void
     {
-        $columnFormat = $this->tab($viewName)->columnModalForName('format');
+        $columnFormat = $this->views[$viewName]->columnModalForName('format');
         if ($columnFormat && $columnFormat->widget->getType() === 'select') {
             $values = [];
             foreach ($this->exportManager->options() as $key => $options) {
@@ -281,7 +281,7 @@ class EditSubcuenta extends EditController
         $exercise = new Ejercicio();
         $exercise->load($codeExercise);
 
-        $model = $this->tab($viewName)->model;
+        $model = $this->views[$viewName]->model;
         $model->dateFrom = $exercise->fechainicio;
         $model->dateTo = $exercise->fechafin;
     }

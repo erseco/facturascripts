@@ -22,23 +22,18 @@ namespace FacturaScripts\Core\Controller;
 use FacturaScripts\Core\DataSrc\Ejercicios;
 use FacturaScripts\Core\Request;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\ExtendedController\ListController;
 use FacturaScripts\Dinamic\Lib\Import\CSVImport;
 use FacturaScripts\Dinamic\Model\CuentaEspecial;
-use FacturaScripts\Dinamic\Model\WorkEvent;
 
 /**
- * Controlador para listar los elementos del modelo Cuenta
+ * Controller to list the items in the Cuenta model.
  *
  * @author Carlos García Gómez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
  */
 class ListCuenta extends ListController
 {
-    /** @var bool Evita mostrar el aviso de saldos pendientes más de una vez por petición. */
-    private $balanceJobsChecked = false;
-
     public function getPageData(): array
     {
         $data = parent::getPageData();
@@ -149,37 +144,6 @@ class ListCuenta extends ListController
         // si la vista tiene una columna saldo en los totales, la eliminamos
         if (isset($view->totalAmounts['saldo'])) {
             unset($view->totalAmounts['saldo']);
-        }
-
-        $this->checkPendingBalanceJobs();
-    }
-
-    /**
-     * Informa al usuario si todavía hay eventos en la cola de trabajo
-     * recalculando los saldos de cuentas y subcuentas.
-     */
-    private function checkPendingBalanceJobs(): void
-    {
-        if ($this->balanceJobsChecked) {
-            return;
-        }
-        $this->balanceJobsChecked = true;
-
-        $where = [
-            Where::eq('done', false),
-            Where::in('name', [
-                'Model.Partida.Save',
-                'Model.Partida.Delete',
-                'Model.Subcuenta.Update',
-                'Model.Subcuenta.Delete',
-                'Model.Cuenta.Update',
-                'Model.Cuenta.Delete',
-            ]),
-        ];
-
-        $pending = WorkEvent::count($where);
-        if ($pending > 0) {
-            Tools::log()->warning('balances-updating-in-background', ['%count%' => $pending]);
         }
     }
 

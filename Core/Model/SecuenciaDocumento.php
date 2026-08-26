@@ -33,53 +33,38 @@ class SecuenciaDocumento extends ModelClass
 {
     use ModelTrait;
 
-    /** @var array Tipos de documento en los que la fecha debe seguir el orden de la numeración. */
-    const DATE_ORDERED_TYPES = ['FacturaCliente', 'FacturaProveedor'];
-
-    /** @var string Código del ejercicio al que pertenece la secuencia. */
+    /** Código del ejercicio al que pertenece la secuencia. @var string */
     public $codejercicio;
 
-    /** @var string Código de la serie a la que pertenece la secuencia. */
+    /** Código de la serie a la que pertenece la secuencia. @var string */
     public $codserie;
 
-    /** @var int Identificador de la empresa asociada. */
+    /** Identificador de la empresa asociada. @var int */
     public $idempresa;
 
-    /** @var int Identificador único de la secuencia documental. */
+    /** Identificador único de la secuencia documental. @var int */
     public $idsecuencia;
 
-    /** @var int Primer número permitido para la secuencia. */
+    /** Primer número permitido para la secuencia. @var int */
     public $inicio;
 
-    /** @var int Longitud utilizada al rellenar con ceros el número. */
+    /** Longitud utilizada al rellenar con ceros el número. @var int */
     public $longnumero;
 
-    /** @var bool Indica si se mantiene la fecha del documento al rellenar un hueco. */
-    public $mantenerfecha;
-
-    /** @var int Siguiente número disponible de la secuencia. */
+    /** Siguiente número disponible de la secuencia. @var int */
     public $numero;
 
-    /** @var string Patrón utilizado para generar el código del documento. */
+    /** Patrón utilizado para generar el código del documento. @var string */
     public $patron;
 
-    /** @var bool Indica si debe validarse la composición del patrón. */
+    /** Indica si debe validarse la composición del patrón. @var bool */
     private static $pattern_test = false;
 
-    /** @var string Tipo de documento al que se aplica la secuencia. */
+    /** Tipo de documento al que se aplica la secuencia. @var string */
     public $tipodoc;
 
-    /** @var bool Indica si se pueden reutilizar huecos existentes en la numeración. */
+    /** Indica si se pueden reutilizar huecos existentes en la numeración. @var bool */
     public $usarhuecos;
-
-    /**
-     * Indica si esta secuencia admite mantener la fecha del documento al rellenar un hueco.
-     * Se excluyen las facturas, donde la fecha debe respetar el orden de la numeración.
-     */
-    public function canKeepDate(): bool
-    {
-        return false === in_array($this->tipodoc, static::DATE_ORDERED_TYPES, true);
-    }
 
     public function clear(): void
     {
@@ -87,7 +72,6 @@ class SecuenciaDocumento extends ModelClass
         $this->idempresa = Tools::settings('default', 'idempresa');
         $this->inicio = 1;
         $this->longnumero = 6;
-        $this->mantenerfecha = false;
         $this->numero = 1;
         $this->patron = '{EJE}{SERIE}{0NUM}';
         $this->usarhuecos = false;
@@ -137,11 +121,6 @@ class SecuenciaDocumento extends ModelClass
         if ($this->longnumero < 1 || $this->longnumero > 10) {
             Tools::log()->warning('longnumero-must-be-between-1-and-10');
             return false;
-        }
-
-        // en facturas la fecha debe seguir el orden de la numeración, no permitimos mantenerla
-        if ($this->mantenerfecha && false === $this->canKeepDate()) {
-            $this->mantenerfecha = false;
         }
 
         // si usar huecos es false, tipodoc es FacturaCliente y el país predeterminado es España, mostramos aviso

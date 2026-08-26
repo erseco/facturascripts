@@ -19,6 +19,7 @@
 
 namespace FacturaScripts\Core\Lib\ExtendedController;
 
+use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Model\AttachedFileRelation;
 use FacturaScripts\Core\Model\Base\BusinessDocument;
 use FacturaScripts\Core\Tools;
@@ -66,7 +67,7 @@ trait DocFilesTrait
             }
 
             $newFile = new AttachedFile();
-            $newFile->path = $destinyName;
+            $newFile->path = $uploadFile->getClientOriginalName();
             if (false === $newFile->save()) {
                 Tools::log()->error('fail');
                 return true;
@@ -117,7 +118,7 @@ trait DocFilesTrait
             return true;
         }
 
-        $modelId = empty($fileRelation->modelcode) ? $fileRelation->modelid : $fileRelation->modelcode;
+        $modelId = $fileRelation->modelid ?? $fileRelation->modelcode;
         if (
             $modelId != $this->request->query('code') ||
             $fileRelation->model !== $this->getModelClassName()
@@ -156,9 +157,8 @@ trait DocFilesTrait
             return true;
         }
 
-        $modelId = empty($fileRelation->modelcode) ? $fileRelation->modelid : $fileRelation->modelcode;
         if (
-            $modelId != $this->request->query('code') ||
+            $fileRelation->modelcode != $this->request->query('code') ||
             $fileRelation->model !== $this->getModelClassName()
         ) {
             Tools::log()->warning('not-allowed-modify');
@@ -184,10 +184,10 @@ trait DocFilesTrait
      */
     private function loadDataDocFiles($view, $model, $modelid): void
     {
-        $where = [Where::eq('model', $model)];
+        $where = [new DataBaseWhere('model', $model)];
         $where[] = is_numeric($modelid) ?
-            Where::eq('modelid|modelcode', $modelid) :
-            Where::eq('modelcode', $modelid);
+            new DataBaseWhere('modelid|modelcode', $modelid) :
+            new DataBaseWhere('modelcode', $modelid);
         $view->loadData('', $where, ['orden' => 'ASC', 'creationdate' => 'DESC']);
     }
 

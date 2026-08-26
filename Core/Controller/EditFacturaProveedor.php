@@ -16,7 +16,7 @@ use FacturaScripts\Dinamic\Model\FacturaProveedor;
 use FacturaScripts\Dinamic\Model\ReciboProveedor;
 
 /**
- * Controlador para editar un único elemento del modelo FacturaProveedor
+ * Description of EditFacturaProveedor
  *
  * @author Carlos Garcia Gomez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
@@ -112,9 +112,8 @@ class EditFacturaProveedor extends PurchasesController
         ]);
 
         // disable columns
-        $this->tab($viewName)
-            ->disableColumn('supplier')
-            ->disableColumn('invoice');
+        $this->views[$viewName]->disableColumn('supplier');
+        $this->views[$viewName]->disableColumn('invoice');
 
         // settings
         $this->setSettings($viewName, 'modalInsert', 'generate-receipts');

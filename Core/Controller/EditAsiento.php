@@ -34,7 +34,7 @@ use FacturaScripts\Dinamic\Model\Asiento;
 use FacturaScripts\Dinamic\Model\Partida;
 
 /**
- * Controlador para editar un único elemento del modelo Asiento
+ * Description of EditAsiento
  *
  * @author Carlos Garcia Gomez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
@@ -45,7 +45,6 @@ class EditAsiento extends PanelController
     use LogAuditTrait;
 
     const MAIN_VIEW_NAME = 'main';
-
     const MAIN_VIEW_TEMPLATE = 'Tab/AccountingEntry';
 
     /** @var array */
@@ -58,24 +57,22 @@ class EditAsiento extends PanelController
      */
     public function getModel(): Asiento
     {
-        $view = $this->tab(static::MAIN_VIEW_NAME);
-
         // loaded record? just return it
-        if ($view->model->id()) {
-            return $view->model;
+        if ($this->views[static::MAIN_VIEW_NAME]->model->id()) {
+            return $this->views[static::MAIN_VIEW_NAME]->model;
         }
 
         // get the record identifier
-        $primaryKey = $this->request->input($view->model->primaryColumn());
+        $primaryKey = $this->request->input($this->views[static::MAIN_VIEW_NAME]->model->primaryColumn());
         $code = $this->request->query('code', $primaryKey);
         if (empty($code)) {
             // new record
-            return $view->model;
+            return $this->views[static::MAIN_VIEW_NAME]->model;
         }
 
         // existing record
-        $view->model->load($code);
-        return $view->model;
+        $this->views[static::MAIN_VIEW_NAME]->model->load($code);
+        return $this->views[static::MAIN_VIEW_NAME]->model;
     }
 
     public function getModelClassName(): string
@@ -160,11 +157,6 @@ class EditAsiento extends PanelController
         AssetManager::addCss($route . '/node_modules/jquery-ui-dist/jquery-ui.min.css', 2);
         AssetManager::addJs($route . '/node_modules/jquery-ui-dist/jquery-ui.min.js', 2);
         AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetAutocomplete.js');
-
-        // cargamos los assets de los mods
-        AccountingHeaderHTML::assets();
-        AccountingLineHTML::assets();
-        AccountingFooterHTML::assets();
     }
 
     /**
@@ -367,8 +359,6 @@ class EditAsiento extends PanelController
         if (false === $this->permissions->allowUpdate) {
             Tools::log()->warning('not-allowed-modify');
             return $this->sendJsonError();
-        } elseif (false === $this->validateFormToken()) {
-            return $this->sendJsonError();
         }
 
         $this->dataBase->beginTransaction();
@@ -403,11 +393,7 @@ class EditAsiento extends PanelController
 
     protected function sendJsonError(): bool
     {
-        $this->response->json([
-            'ok' => false,
-            'messages' => Tools::log()::read('master', $this->logLevels),
-            'multireqtoken' => $this->multiRequestProtection->newToken()
-        ]);
+        $this->response->json(['ok' => false, 'messages' => Tools::log()::read('master', $this->logLevels)]);
         return false;
     }
 

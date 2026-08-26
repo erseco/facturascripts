@@ -25,9 +25,6 @@ use FacturaScripts\Core\Template\ApiController;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 
-/**
- * Controlador de la API para crear una factura rectificativa de cliente.
- */
 class ApiCreateFacturaRectificativaCliente extends ApiController
 {
     protected function runResource(): void

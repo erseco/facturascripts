@@ -25,7 +25,7 @@ use FacturaScripts\Core\Tools;
 use ZipArchive;
 
 /**
- * Controlador para listar los elementos del modelo AttachedFile
+ * Controller to list the items in the AttachedFile model
  *
  * @author Carlos García Gómez      <carlos@facturascripts.com>
  * @author Francesc Pineda Segarra  <francesc.pineda.segarra@gmail.com>

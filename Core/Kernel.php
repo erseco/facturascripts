@@ -168,7 +168,6 @@ final class Kernel
         Calculator::addMod(new CalculatorModSpain());
 
         // workers
-        WorkQueue::addWorker('AtributoWorker', 'Model.Atributo.Update');
         WorkQueue::addWorker('CuentaWorker', 'Model.Cuenta.Delete');
         WorkQueue::addWorker('CuentaWorker', 'Model.Cuenta.Update');
         WorkQueue::addWorker('CuentaWorker', 'Model.Subcuenta.Delete');
@@ -356,7 +355,7 @@ final class Kernel
      */
     public static function version(): float
     {
-        return 2026.65;
+        return 2026.5;
     }
 
     /**

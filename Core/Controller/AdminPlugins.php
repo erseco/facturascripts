@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -31,8 +31,7 @@ use FacturaScripts\Core\UploadedFile;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
- * Controlador para gestionar los plugins de la aplicación: subir, instalar, activar,
- * desactivar y eliminar.
+ * AdminPlugins.
  *
  * @author Carlos García Gómez <carlos@facturascripts.com>
  */
@@ -208,11 +207,9 @@ class AdminPlugins extends Controller
         $installedPlugins = Plugins::list();
         foreach (Forja::plugins() as $item) {
             // plugin is already installed?
-            $item['installed'] = false;
             foreach ($installedPlugins as $plugin) {
                 if ($plugin->name == $item['name']) {
-                    $item['installed'] = true;
-                    break;
+                    continue 2;
                 }
             }
 

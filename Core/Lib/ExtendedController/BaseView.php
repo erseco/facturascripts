@@ -363,21 +363,15 @@ abstract class BaseView
             VisualItem::setLevel($user->level);
         }
 
-        // cargamos la estructura desde el XML
-        $viewName = explode('-', $this->name)[0];
-        VisualItemLoadEngine::installXML($viewName, $this->pageOption);
-
-        // si hay personalización guardada, superponemos sus cambios sobre el XML
-        $custom = PageOption::findWhere(
-            $this->getPageWhere($user),
-            ['nick' => 'ASC']
-        );
-        if (false === is_null($custom)) {
+        $orderBy = ['nick' => 'ASC'];
+        $where = $this->getPageWhere($user);
+        if ($this->pageOption->loadWhere($where, $orderBy)) {
             $this->settings['customized'] = true;
-            VisualItemLoadEngine::mergeCustomization($this->pageOption, $custom);
+        } else {
+            $viewName = explode('-', $this->name)[0];
+            VisualItemLoadEngine::installXML($viewName, $this->pageOption);
         }
 
-        // creamos la estructura visual
         VisualItemLoadEngine::loadArray($this->columns, $this->modals, $this->rows, $this->pageOption);
     }
 

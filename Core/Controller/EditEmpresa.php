@@ -26,7 +26,7 @@ use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\RegimenIVA;
 
 /**
- * Controlador para editar un único elemento del modelo Empresa
+ * Controller to edit a single item from the  Empresa model
  *
  * @author Carlos García Gómez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>

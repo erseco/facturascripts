@@ -25,7 +25,7 @@ use FacturaScripts\Dinamic\Model\CronJob;
 use FacturaScripts\Dinamic\Model\LogMessage;
 
 /**
- * Controlador para listar los elementos del modelo LogMessage
+ * Controller to list the items in the LogMessage model
  *
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  * @author Francesc Pineda Segarra      <francesc.pineda.segarra@gmail.com>

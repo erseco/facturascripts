@@ -39,16 +39,16 @@ class CodeModel
     const MODEL_NAMESPACE = '\\FacturaScripts\\Dinamic\\Model\\';
     const SEARCH_LIMIT = 50;
 
-    /** @var DataBase Conexión compartida con la base de datos. */
+    /** Conexión compartida con la base de datos. @var DataBase */
     protected static $dataBase;
 
-    /** @var int Número máximo de resultados que se pueden obtener. */
+    /** Número máximo de resultados que se pueden obtener. @var int */
     protected static $limit;
 
-    /** @var string Código identificativo del elemento. */
+    /** Código identificativo del elemento. @var string */
     public $code;
 
-    /** @var string Descripción asociada al código. */
+    /** Descripción asociada al código. @var string */
     public $description;
 
     public function __construct(array $data = [])
@@ -293,15 +293,6 @@ class CodeModel
      */
     public static function search(string $tableName, string $fieldCode, string $fieldDescription, string $query, array $where = []): array
     {
-        // validamos los nombres de campos para evitar SQL injection
-        if (false === self::isValidFieldName($fieldCode)) {
-            Tools::log()->error('invalid-field-name: ' . $fieldCode);
-            return [];
-        } elseif (false === self::isValidFieldName($fieldDescription)) {
-            Tools::log()->error('invalid-field-description: ' . $fieldDescription);
-            return [];
-        }
-
         // comprobamos si se trata de un modelo (admite Join\Nombre)
         $modelClass = self::MODEL_NAMESPACE . $tableName;
         if (class_exists($modelClass)) {

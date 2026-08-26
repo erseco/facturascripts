@@ -22,41 +22,23 @@ namespace FacturaScripts\Core\Contract;
 use FacturaScripts\Core\Model\Base\PurchaseDocument;
 use FacturaScripts\Dinamic\Model\Proveedor;
 
-/**
- * Define los puntos de extensión de los modales de proveedores y productos de los documentos de compra.
- */
 interface PurchasesModalInterface
 {
-    /**
-     * Ejecuta la fase posterior del mod después de procesar los filtros estándar de los modales.
-     *
-     * @param array $formData Datos recibidos desde el formulario.
-     */
     public function apply(PurchaseDocument &$model, array $formData): void;
 
-    /**
-     * Ejecuta la fase previa del mod antes de procesar los filtros estándar de los modales.
-     *
-     * @param array $formData Datos recibidos desde el formulario.
-     */
     public function applyBefore(PurchaseDocument &$model, array $formData): void;
 
-    /**
-     * Registra los recursos CSS y JavaScript que necesita el mod.
-     */
     public function assets(): void;
 
     /**
-     * Devuelve los identificadores de las columnas a añadir al modal de búsqueda de producto.
-     * Cada identificador se enviará posteriormente a renderField() y renderFieldHead().
+     * Devuelve los nombres de las columnas a añadir al modal de búsqueda de producto.
      *
      * @return string[]
      */
     public function newProductFields(): array;
 
     /**
-     * Devuelve los identificadores de las columnas a añadir al modal de selección de proveedor.
-     * Cada identificador se enviará posteriormente a renderField().
+     * Devuelve los nombres de las columnas a añadir al modal de selección de proveedor.
      *
      * @return string[]
      */

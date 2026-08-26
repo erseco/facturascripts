@@ -50,14 +50,14 @@ abstract class JoinModel
     /** @var array Atributos del modelo. */
     private $attributes = [];
 
+    /** Devuelve la lista de tablas necesarias para la ejecución de la vista. */
+    abstract protected function getTables(): array;
+
     /** Devuelve la lista de campos o columnas para la cláusula SELECT. */
     abstract protected function getFields(): array;
 
     /** Devuelve las tablas relacionadas para la cláusula FROM. */
     abstract protected function getSQLFrom(): string;
-
-    /** Devuelve la lista de tablas necesarias para la ejecución de la vista. */
-    abstract protected function getTables(): array;
 
     /** Constructor e inicializador de la clase. */
     public function __construct(array $data = [])
@@ -284,12 +284,6 @@ abstract class JoinModel
         return isset($fields[$columnName]);
     }
 
-    /** Devuelve el valor de la clave primaria del modelo master. */
-    public function id()
-    {
-        return $this->primaryColumnValue();
-    }
-
     /**
      * Carga un registro del modelo utilizando el código de la clave primaria del master model.
      *
@@ -344,20 +338,15 @@ abstract class JoinModel
     }
 
     /**
-     * Asigna los valores del array $data a los atributos del modelo.
+     * Carga el primer registro cuyo campo coincide con el valor indicado.
      *
-     * @param array $data
-     * @param array $exclude Campos que no se deben cargar.
+     * @param string $field
+     * @param mixed $value
+     * @return bool
      */
-    public function loadFromData(array $data = [], array $exclude = []): void
+    public function loadWhereEq(string $field, $value): bool
     {
-        foreach ($data as $field => $value) {
-            if (in_array($field, $exclude)) {
-                continue;
-            }
-
-            $this->attributes[$field] = $value;
-        }
+        return $this->loadWhere([Where::eq($field, $value)]);
     }
 
     /**
@@ -386,27 +375,8 @@ abstract class JoinModel
         return true;
     }
 
-    /**
-     * Carga el primer registro cuyo campo coincide con el valor indicado.
-     *
-     * @param string $field
-     * @param mixed $value
-     * @return bool
-     */
-    public function loadWhereEq(string $field, $value): bool
-    {
-        return $this->loadWhere([Where::eq($field, $value)]);
-    }
-
-    /**
-     * Devuelve el valor de la clave primaria del modelo principal.
-     * Contiene la implementación real y se mantiene como punto de extensión
-     * por compatibilidad con plugins que lo sobreescriben.
-     *
-     * @return mixed
-     * @deprecated Usar id() en su lugar.
-     */
-    public function primaryColumnValue()
+    /** Devuelve el valor de la clave primaria del modelo master. */
+    public function id()
     {
         if (isset($this->masterModel)) {
             $primaryColumn = $this->masterModel->primaryColumn();
@@ -414,6 +384,21 @@ abstract class JoinModel
         }
 
         return null;
+    }
+
+    /**
+     * Devuelve el valor de la clave primaria del modelo principal.
+     *
+     * @return mixed
+     * @deprecated Usar id() en su lugar.
+     */
+    #[Deprecated(
+        reason: 'Use id() instead',
+        replacement: '%class%->id()',
+    )]
+    public function primaryColumnValue()
+    {
+        return $this->id();
     }
 
     /**
@@ -465,6 +450,15 @@ abstract class JoinModel
         return '';
     }
 
+    /**
+     * Construye la clave de caché incluyendo las tablas del join,
+     * para poder invalidarla solamente cuando cambia alguna de ellas.
+     */
+    private function getCacheKey(string $suffix): string
+    {
+        return 'join-model-' . implode('-', $this->getTables()) . '-' . md5($this->getSQLFrom()) . '-' . $suffix;
+    }
+
     /** Comprueba que existen todas las tablas necesarias. */
     private function checkTables(): bool
     {
@@ -504,15 +498,6 @@ abstract class JoinModel
         return $result;
     }
 
-    /**
-     * Construye la clave de caché incluyendo las tablas del join,
-     * para poder invalidarla solamente cuando cambia alguna de ellas.
-     */
-    private function getCacheKey(string $suffix): string
-    {
-        return 'join-model-' . implode('-', $this->getTables()) . '-' . md5($this->getSQLFrom()) . '-' . $suffix;
-    }
-
     /** Devuelve la cláusula GROUP BY. */
     private function getGroupBy(): string
     {
@@ -536,6 +521,14 @@ abstract class JoinModel
             $coma = ', ';
         }
         return $result;
+    }
+
+    /** Asigna los valores del array $data a los atributos del modelo. */
+    protected function loadFromData(array $data): void
+    {
+        foreach ($data as $field => $value) {
+            $this->attributes[$field] = $value;
+        }
     }
 
     /** Establece el modelo master para las operaciones de datos. */

@@ -32,19 +32,19 @@ class EmailNotification extends ModelClass
 {
     use ModelTrait;
 
-    /** @var string Cuerpo de la plantilla de notificación. */
+    /** Cuerpo de la plantilla de notificación. @var string */
     public $body;
 
-    /** @var string Fecha de creación de la plantilla. */
+    /** Fecha de creación de la plantilla. @var string */
     public $creationdate;
 
-    /** @var bool Indica si la notificación por correo está habilitada. */
+    /** Indica si la notificación por correo está habilitada. @var bool */
     public $enabled;
 
-    /** @var string Nombre identificativo de la plantilla de notificación. */
+    /** Nombre identificativo de la plantilla de notificación. @var string */
     public $name;
 
-    /** @var string Asunto de la plantilla de notificación. */
+    /** Asunto de la plantilla de notificación. @var string */
     public $subject;
 
     public function clear(): void

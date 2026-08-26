@@ -16,7 +16,7 @@ use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\ReciboCliente;
 
 /**
- * Controlador para editar un único elemento del modelo FacturaCliente
+ * Description of EditFacturaCliente
  *
  * @author Carlos Garcia Gomez <carlos@facturascripts.com>
  */
@@ -111,9 +111,8 @@ class EditFacturaCliente extends SalesController
         ]);
 
         // disable columns
-        $this->tab($viewName)
-            ->disableColumn('customer')
-            ->disableColumn('invoice');
+        $this->views[$viewName]->disableColumn('customer');
+        $this->views[$viewName]->disableColumn('invoice');
 
         // settings
         $this->setSettings($viewName, 'modalInsert', 'generate-receipts');

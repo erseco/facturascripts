@@ -28,7 +28,7 @@ use FacturaScripts\Dinamic\Model\Agente;
 use FacturaScripts\Dinamic\Model\TotalModel;
 
 /**
- * Controlador para editar un único elemento del modelo Agente
+ * Controller to edit a single item from the Agente model
  *
  * @author Carlos Garcia Gomez            <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal  <yopli2000@gmail.com>
@@ -234,7 +234,7 @@ class EditAgente extends ComercialContactController
      */
     protected function loadLanguageValues(string $viewName): void
     {
-        $columnLangCode = $this->tab($viewName)->columnForName('language');
+        $columnLangCode = $this->views[$viewName]->columnForName('language');
         if ($columnLangCode && $columnLangCode->widget->getType() === 'select') {
             $langs = [];
             foreach (Tools::lang()->getAvailableLanguages() as $key => $value) {
@@ -247,5 +247,6 @@ class EditAgente extends ComercialContactController
 
     protected function setCustomWidgetValues(string $viewName): void
     {
+        ;
     }
 }

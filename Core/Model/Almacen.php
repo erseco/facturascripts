@@ -36,34 +36,34 @@ class Almacen extends ModelClass
     use ModelTrait;
     use CompanyRelationTrait;
 
-    /** @var bool Indica si el almacén está activo. */
+    /** Indica si el almacén está activo. @var bool */
     public $activo;
 
-    /** @var string Apartado de correos del almacén. */
+    /** Apartado de correos del almacén. @var string */
     public $apartado;
 
-    /** @var string Ciudad donde se encuentra el almacén. */
+    /** Ciudad donde se encuentra el almacén. @var string */
     public $ciudad;
 
-    /** @var string Código identificativo del almacén. */
+    /** Código identificativo del almacén. @var string */
     public $codalmacen;
 
-    /** @var string Código del país donde se encuentra el almacén. */
+    /** Código del país donde se encuentra el almacén. @var string */
     public $codpais;
 
-    /** @var string Código postal del almacén. */
+    /** Código postal del almacén. @var string */
     public $codpostal;
 
-    /** @var string Dirección postal del almacén. */
+    /** Dirección postal del almacén. @var string */
     public $direccion;
 
-    /** @var string Nombre del almacén. */
+    /** Nombre del almacén. @var string */
     public $nombre;
 
-    /** @var string Provincia donde se encuentra el almacén. */
+    /** Provincia donde se encuentra el almacén. @var string */
     public $provincia;
 
-    /** @var string Número de teléfono del almacén. */
+    /** Número de teléfono del almacén. @var string */
     public $telefono;
 
     public function clear(): void

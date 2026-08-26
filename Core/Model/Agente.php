@@ -47,28 +47,28 @@ class Agente extends ModelClass
     use GravatarTrait;
     use ProductRelationTrait;
 
-    /** @var string Cargo o puesto del agente. */
+    /** Cargo o puesto del agente. @var string */
     public $cargo;
 
-    /** @var string Código identificativo del agente. */
+    /** Código identificativo del agente. @var string */
     public $codagente;
 
-    /** @var bool Indica si el agente está dado de baja. */
+    /** Indica si el agente está dado de baja. @var bool */
     public $debaja;
 
-    /** @var string Fecha de alta del agente. */
+    /** Fecha de alta del agente. @var string */
     public $fechaalta;
 
-    /** @var string Fecha de baja del agente. */
+    /** Fecha de baja del agente. @var string */
     public $fechabaja;
 
-    /** @var integer Identificador del contacto asociado al agente. */
+    /** Identificador del contacto asociado al agente. @var integer */
     public $idcontacto;
 
-    /** @var string Nombre del agente. */
+    /** Nombre del agente. @var string */
     public $nombre;
 
-    /** @var string Observaciones internas sobre el agente. */
+    /** Observaciones internas sobre el agente. @var string */
     public $observaciones;
 
     public function clear(): void

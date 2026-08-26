@@ -36,22 +36,22 @@ class Retencion extends ModelClass
 {
     use ModelTrait;
 
-    /** @var bool Indica si la retención está activa. */
+    /** Indica si la retención está activa. @var bool */
     public $activa;
 
-    /** @var string Código identificativo de la retención. */
+    /** Código identificativo de la retención. @var string */
     public $codretencion;
 
-    /** @var string Código de la subcuenta contable de retenciones. */
+    /** Código de la subcuenta contable de retenciones. @var string */
     public $codsubcuentaret;
 
-    /** @var string Código de la subcuenta acreedora asociada. */
+    /** Código de la subcuenta acreedora asociada. @var string */
     public $codsubcuentaacr;
 
-    /** @var string Descripción de la retención. */
+    /** Descripción de la retención. @var string */
     public $descripcion;
 
-    /** @var int Porcentaje de retención aplicado. */
+    /** Porcentaje de retención aplicado. @var int */
     public $porcentaje;
 
     public function clear(): void

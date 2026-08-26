@@ -35,25 +35,25 @@ class Tarifa extends ModelClass
     const APPLY_COST = 'coste';
     const APPLY_PRICE = 'pvp';
 
-    /** @var string Base sobre la que se aplica la fórmula: coste o precio de venta. */
+    /** Base sobre la que se aplica la fórmula: coste o precio de venta. @var string */
     public $aplicar;
 
-    /** @var string Código identificativo de la tarifa. */
+    /** Código identificativo de la tarifa. @var string */
     public $codtarifa;
 
-    /** @var bool Indica si el precio calculado no puede superar el precio de venta. */
+    /** Indica si el precio calculado no puede superar el precio de venta. @var bool */
     public $maxpvp;
 
-    /** @var bool Indica si el precio calculado no puede ser inferior al coste. */
+    /** Indica si el precio calculado no puede ser inferior al coste. @var bool */
     public $mincoste;
 
-    /** @var string Nombre de la tarifa. */
+    /** Nombre de la tarifa. @var string */
     public $nombre;
 
-    /** @var float Porcentaje que se suma o resta en la fórmula de la tarifa. */
+    /** Porcentaje que se suma o resta en la fórmula de la tarifa. @var float */
     public $valorx;
 
-    /** @var float Importe fijo que se suma o resta en la fórmula de la tarifa. */
+    /** Importe fijo que se suma o resta en la fórmula de la tarifa. @var float */
     public $valory;
 
     /**
@@ -76,6 +76,11 @@ class Tarifa extends ModelClass
                 break;
         }
 
+        $ext = $this->pipe('apply', $finalPrice, $cost, $price);
+        if ($ext && is_numeric($ext)) {
+            $finalPrice = $ext;
+        }
+
         // Aplicar límite máximo de pvp si corresponde
         if ($this->maxpvp && $finalPrice > $price) {
             $finalPrice = (float)$price;
@@ -83,12 +88,7 @@ class Tarifa extends ModelClass
 
         // Aplicar límite mínimo de coste (tiene prioridad sobre maxpvp)
         if ($this->mincoste && $finalPrice < $cost) {
-            $finalPrice = (float)$cost;
-        }
-
-        $ext = $this->pipe('apply', $finalPrice, $cost, $price);
-        if ($ext && is_numeric($ext)) {
-            $finalPrice = $ext;
+            return (float)$cost;
         }
 
         return $finalPrice;
@@ -102,11 +102,6 @@ class Tarifa extends ModelClass
      */
     public function applyTo($variant, $product): float
     {
-        $ext = $this->pipe('applyTo', $variant, $product);
-        if ($ext && is_numeric($ext)) {
-            return $ext;
-        }
-
         return $this->apply((float)$variant->coste, (float)$variant->precio);
     }
 

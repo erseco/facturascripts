@@ -26,7 +26,7 @@ use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\Contacto;
 
 /**
- * Controlador para editar un único elemento del modelo EmailSent
+ * Controller to edit a single register of EmailSent
  *
  * @author Raul                     <raljopa@gmail.com>
  * @author Carlos García Gómez      <carlos@facturascripts.com>
@@ -165,7 +165,7 @@ class EditEmailSent extends EditController
 
         switch ($viewName) {
             case 'EmailSentAttachment':
-                $attachments = $this->tab($mvn)->model->getAttachments();
+                $attachments = $this->views[$mvn]->model->getAttachments();
 
                 // si no hay adjuntos ocultamos la pestaña
                 if (empty($attachments)) {

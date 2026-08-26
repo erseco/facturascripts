@@ -33,22 +33,22 @@ class Divisa extends ModelClass
 {
     use ModelTrait;
 
-    /** @var string Código identificativo de la divisa. */
+    /** Código identificativo de la divisa. @var string */
     public $coddivisa;
 
-    /** @var string Código numérico de la divisa según la norma ISO 4217. */
+    /** Código numérico de la divisa según la norma ISO 4217. @var string */
     public $codiso;
 
-    /** @var string Descripción de la divisa. */
+    /** Descripción de la divisa. @var string */
     public $descripcion;
 
-    /** @var float|int Tasa de conversión de la divisa con respecto al euro. */
+    /** Tasa de conversión de la divisa con respecto al euro. @var float|int */
     public $tasaconv;
 
-    /** @var float|int Tasa de conversión con respecto al euro utilizada en compras. */
+    /** Tasa de conversión con respecto al euro utilizada en compras. @var float|int */
     public $tasaconvcompra;
 
-    /** @var string Símbolo utilizado para representar la divisa. */
+    /** Símbolo utilizado para representar la divisa. @var string */
     public $simbolo;
 
     public function clear(): void

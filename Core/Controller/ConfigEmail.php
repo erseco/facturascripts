@@ -28,7 +28,7 @@ use FacturaScripts\Dinamic\Lib\Email\NewMail;
 use FacturaScripts\Dinamic\Model\EmailNotification;
 
 /**
- * Controlador para editar la configuración del correo electrónico.
+ * Controller to edit main settings
  *
  * @author Daniel Fernández Giménez  <contacto@danielfg.es>
  * @author Carlos Garcia Gomez       <carlos@facturascripts.com>

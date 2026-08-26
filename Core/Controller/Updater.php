@@ -35,7 +35,7 @@ use FacturaScripts\Dinamic\Model\User;
 use ZipArchive;
 
 /**
- * Controlador para actualizar el núcleo de FacturaScripts y los plugins instalados.
+ * Description of Updater
  *
  * @author Carlos García Gómez <carlos@facturascripts.com>
  */
@@ -120,18 +120,16 @@ class Updater extends Controller
 
         $this->telemetryManager = new Telemetry();
 
-        // en las acciones que escriben en disco, comprobamos que las carpetas sean escribibles
-        $action = $this->request->get('action', '');
-        if (in_array($action, ['cancel', 'download', 'post-update', 'update'])) {
-            $folders = $this->notWritableFolders();
-            if ($folders) {
-                Tools::log()->warning('folders-not-writable', [
-                    '%folders%' => implode(', ', $folders)
-                ]);
-                return;
-            }
+        // Folders writable?
+        $folders = $this->notWritableFolders();
+        if ($folders) {
+            Tools::log()->warning('folders-not-writable', [
+                '%folders%' => implode(', ', $folders)
+            ]);
+            return;
         }
 
+        $action = $this->request->get('action', '');
         $this->execAction($action);
     }
 

@@ -42,7 +42,7 @@ use FacturaScripts\Dinamic\Model\Stock;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
- * Controlador del panel de inicio (dashboard) que se muestra tras iniciar sesión.
+ * Description of Dashboard
  *
  * @author Carlos Garcia Gomez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
@@ -178,12 +178,12 @@ class Dashboard extends Controller
         $this->loadCreateLinks();
         $this->loadFirstSteps();
         $this->loadOpenLinks();
-        $this->loadNews();
 
         if (false === $this->isOnboarding) {
             $this->loadLowStockSection();
             $this->loadReceiptSection();
             $this->loadStats();
+            $this->loadNews();
         }
 
         $this->pipe('loadExtensions');
@@ -196,14 +196,6 @@ class Dashboard extends Controller
         $invoiceCount = FacturaCliente::count();
 
         $steps = [
-            [
-                'complete' => !empty($this->empresa->direccion) && !empty($this->empresa->ciudad)
-                    && !empty($this->empresa->provincia),
-                'icon' => 'fa-solid fa-building',
-                'label' => 'company-address',
-                'page' => 'EditEmpresa',
-                'url' => $this->empresa->url(),
-            ],
             [
                 'complete' => $customerCount > 0,
                 'icon' => 'fa-solid fa-plus',
@@ -225,7 +217,7 @@ class Dashboard extends Controller
         ];
 
         foreach ($steps as $step) {
-            if (false === $this->user->can($step['page'] ?? $step['url'], 'update')) {
+            if (false === $this->user->can($step['url'], 'update')) {
                 continue;
             }
 
@@ -282,7 +274,7 @@ class Dashboard extends Controller
                 ->setTimeout(5)
                 ->json() ?? [];
         });
-        $this->news = is_array($news) ? array_slice($news, 0, 5) : [];
+        $this->news = is_array($news) ? array_slice($news, 0, 1) : [];
     }
 
     /**

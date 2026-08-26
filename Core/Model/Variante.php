@@ -42,37 +42,37 @@ class Variante extends ModelClass
     use ModelTrait;
     use ProductRelationTrait;
 
-    /** @var string Código de barras de la variante. */
+    /** Código de barras de la variante. @var string */
     public $codbarras;
 
-    /** @var int|float Precio de coste de la variante. */
+    /** Precio de coste de la variante. @var int|float */
     public $coste;
 
-    /** @var int Identificador del primer valor de atributo de la variante. */
+    /** Identificador del primer valor de atributo de la variante. @var int */
     public $idatributovalor1;
 
-    /** @var int Identificador del segundo valor de atributo de la variante. */
+    /** Identificador del segundo valor de atributo de la variante. @var int */
     public $idatributovalor2;
 
-    /** @var int Identificador del tercer valor de atributo de la variante. */
+    /** Identificador del tercer valor de atributo de la variante. @var int */
     public $idatributovalor3;
 
-    /** @var int Identificador del cuarto valor de atributo de la variante. */
+    /** Identificador del cuarto valor de atributo de la variante. @var int */
     public $idatributovalor4;
 
-    /** @var int Identificador único de la variante. */
+    /** Identificador único de la variante. @var int */
     public $idvariante;
 
-    /** @var float Porcentaje de margen de beneficio de la variante. */
+    /** Porcentaje de margen de beneficio de la variante. @var float */
     public $margen;
 
-    /** @var int|float Precio de venta de la variante sin impuestos. */
+    /** Precio de venta de la variante sin impuestos. @var int|float */
     public $precio;
 
-    /** @var string Referencia o SKU de la variante. */
+    /** Referencia o SKU de la variante. @var string */
     public $referencia;
 
-    /** @var float|int Stock físico total de la variante. */
+    /** Stock físico total de la variante. @var float|int */
     public $stockfis;
 
     public function clear(): void

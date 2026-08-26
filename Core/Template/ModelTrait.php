@@ -24,13 +24,6 @@ use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\DbQuery;
 use FacturaScripts\Core\DbUpdater;
 
-/**
- * Aporta a los modelos la implementación de los métodos estáticos de consulta
- * (all, find, count, create...), el acceso al constructor de consultas de su
- * tabla y la carga de la definición de sus campos desde la base de datos.
- *
- * @author Carlos Garcia Gomez <carlos@facturascripts.com>
- */
 trait ModelTrait
 {
     use ExtensionsTrait;
@@ -173,7 +166,7 @@ trait ModelTrait
     }
 
     /**
-     * Devuelve la lista de campos de la tabla.
+     * Returns the list of fields in the table.
      *
      * @return array
      */
@@ -187,7 +180,7 @@ trait ModelTrait
     }
 
     /**
-     * Devuelve el nombre de la clase del modelo sin el espacio de nombres.
+     * Returns the name of the class of the model.
      *
      * @return string
      */
@@ -199,7 +192,7 @@ trait ModelTrait
 
     public static function table(): DbQuery
     {
-        // comprobamos si la tabla existe
+        // check if the table exists
         if (!DbUpdater::isTableChecked(static::tableName())) {
             new static();
         }
@@ -236,20 +229,20 @@ trait ModelTrait
             return;
         }
 
-        // leemos de la caché
+        // read from the cache
         $key = 'model-fields-' . $this->modelClassName();
         static::$fields = Cache::get($key);
         if (is_array(static::$fields) && static::$fields) {
             return;
         }
 
-        // ¿existe la tabla?
+        // table exists?
         if (false === $this->db()->tableExists(static::tableName())) {
             static::$fields = [];
             return;
         }
 
-        // obtenemos de la base de datos y guardamos en la caché
+        // get from the database and store on the cache
         static::$fields = $this->db()->getColumns(static::tableName());
         Cache::set($key, static::$fields);
     }

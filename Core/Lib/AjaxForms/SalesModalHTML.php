@@ -398,9 +398,7 @@ class SalesModalHTML
             . '<div class="col-sm-8"><label for="newCustomerName" class="form-label">' . Tools::trans('name') . '</label>'
             . '<input type="text" name="newcustomer_nombre" id="newCustomerName" class="form-control" maxlength="100" required></div>'
             . '<div class="col-sm-4"><label for="newCustomerCifnif" class="form-label">' . Tools::trans('cifnif') . '</label>'
-            . '<input type="text" name="newcustomer_cifnif" id="newCustomerCifnif" class="form-control" maxlength="30"'
-            . ' oninput="document.forms[\'salesForm\'][\'newcustomer_cifnif_confirmed\'].value = \'0\';">'
-            . '<input type="hidden" name="newcustomer_cifnif_confirmed" value="0"></div>'
+            . '<input type="text" name="newcustomer_cifnif" id="newCustomerCifnif" class="form-control" maxlength="30"></div>'
             . '<div class="col-sm-4"><label for="newCustomerPhone" class="form-label">' . Tools::trans('phone') . '</label>'
             . '<input type="tel" name="newcustomer_telefono" id="newCustomerPhone" class="form-control" maxlength="30"></div>'
             . '<div class="col-sm-8"><label for="newCustomerEmail" class="form-label">' . Tools::trans('email') . '</label>'
@@ -629,21 +627,16 @@ class SalesModalHTML
         return $html;
     }
 
-    private static function subfamilias(Familia $family, int $level = 1, array $visited = []): string
+    private static function subfamilias(Familia $family, int $level = 1): string
     {
-        $visited[$family->codfamilia] = true;
         $options = '';
         foreach (Familias::children($family->codfamilia) as $fam) {
-            if (isset($visited[$fam->codfamilia])) {
-                continue;
-            }
-
             $options .= '<option value="' . $fam->codfamilia . '">'
                 . str_repeat('-', $level) . ' ' . $fam->descripcion
                 . '</option>';
 
             // añadimos las subfamilias de forma recursiva
-            $options .= static::subfamilias($fam, $level + 1, $visited);
+            $options .= static::subfamilias($fam, $level + 1);
         }
 
         return $options;

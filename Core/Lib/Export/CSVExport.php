@@ -108,15 +108,14 @@ class CSVExport extends ExportBase
     {
         $this->setFileName($title);
 
-        // usamos las columnas visibles de la vista; si no hay, todos los campos del modelo
-        $fields = empty($columns) ? $this->getModelFields($model) : $this->getColumnTitles($columns);
+        $fields = $this->getModelFields($model);
         $cursor = $model->all($where, $order, $offset, self::LIST_LIMIT);
         if (empty($cursor)) {
             $this->writeData([], $fields);
         }
 
         while (!empty($cursor)) {
-            $data = empty($columns) ? $this->getCursorRawData($cursor) : $this->getCursorData($cursor, $columns);
+            $data = $this->getCursorRawData($cursor);
             $this->writeData($data, $fields);
             $fields = [];
 
@@ -145,9 +144,8 @@ class CSVExport extends ExportBase
      */
     public function addModelPage($model, $columns, $title = ''): bool
     {
-        // usamos las columnas visibles de la vista; si no hay, todos los campos del modelo
-        $fields = empty($columns) ? $this->getModelFields($model) : $this->getColumnTitles($columns);
-        $data = empty($columns) ? $this->getCursorRawData([$model]) : $this->getCursorData([$model], $columns);
+        $fields = $this->getModelFields($model);
+        $data = $this->getCursorRawData([$model]);
         $this->writeData($data, $fields);
 
         // no continuamos con la exportación
