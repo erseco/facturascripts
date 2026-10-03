@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2023-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2023-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -35,22 +35,22 @@ final class Request
     const METHOD_POST = 'POST';
     const METHOD_PUT = 'PUT';
 
-    /** @var SubRequest Cookies de la petición ($_COOKIE). */
+    /** Cookies de la petición ($_COOKIE). @var SubRequest */
     public $cookies;
 
-    /** @var RequestFiles Archivos subidos ($_FILES). */
+    /** Archivos subidos ($_FILES). @var RequestFiles */
     public $files;
 
-    /** @var Headers Cabeceras HTTP derivadas de $_SERVER. */
+    /** Cabeceras HTTP derivadas de $_SERVER. @var Headers */
     public $headers;
 
-    /** @var SubRequest Parámetros de la query string ($_GET). */
+    /** Parámetros de la query string ($_GET). @var SubRequest */
     public $query;
 
-    /** @var string|null Cuerpo crudo de la petición; si es null se lee de php://input bajo demanda. */
+    /** Cuerpo crudo de la petición; si es null se lee de php://input bajo demanda. @var string|null */
     private $rawInput;
 
-    /** @var SubRequest Parámetros del cuerpo de la petición ($_POST y PUT/PATCH form-urlencoded). */
+    /** Parámetros del cuerpo de la petición ($_POST y PUT/PATCH form-urlencoded). @var SubRequest */
     public $request;
 
     /**
@@ -368,12 +368,18 @@ final class Request
     }
 
     /**
-     * Devuelve la IP del cliente. Las cabeceras de proxy solo se usan si la petición llega desde
-     * un proxy de confianza (ver ClientIp).
+     * Devuelve la IP del cliente, dando prioridad a Cloudflare y X-Forwarded-For
+     * antes que REMOTE_ADDR. Si no hay nada disponible devuelve "::1".
      */
     public function ip(): string
     {
-        return Session::getClientIp();
+        foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR'] as $field) {
+            if (!empty($_SERVER[$field])) {
+                return (string)$_SERVER[$field];
+            }
+        }
+
+        return '::1';
     }
 
     /** Comprueba si el método HTTP coincide con el indicado (GET, POST, etc.). */

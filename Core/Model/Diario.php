@@ -33,10 +33,10 @@ class Diario extends ModelClass
 {
     use ModelTrait;
 
-    /** @var string Descripción del diario contable. */
+    /** Descripción del diario contable. @var string */
     public $descripcion;
 
-    /** @var integer Identificador único del diario contable. */
+    /** Identificador único del diario contable. @var integer */
     public $iddiario;
 
     public static function primaryColumn(): string

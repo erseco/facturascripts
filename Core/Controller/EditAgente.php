@@ -28,7 +28,7 @@ use FacturaScripts\Dinamic\Model\Agente;
 use FacturaScripts\Dinamic\Model\TotalModel;
 
 /**
- * Controlador para editar un único elemento del modelo Agente
+ * Controller to edit a single item from the Agente model
  *
  * @author Carlos Garcia Gomez            <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal  <yopli2000@gmail.com>
@@ -90,8 +90,7 @@ class EditAgente extends ComercialContactController
     protected function createDocumentView(string $viewName, string $model, string $label): void
     {
         $this->createCustomerListView($viewName, $model, $label)
-            ->setSettings('btnPrint', true)
-            ->setSettings('group', 'sales');
+            ->setSettings('btnPrint', true);
 
         // agrupamos las acciones en un dropdown
         $this->tab($viewName)->addButtonGroup([
@@ -115,8 +114,7 @@ class EditAgente extends ComercialContactController
     protected function createInvoiceView(string $viewName): void
     {
         $this->createCustomerListView($viewName, 'FacturaCliente', 'invoices')
-            ->setSettings('btnPrint', true)
-            ->setSettings('group', 'sales');
+            ->setSettings('btnPrint', true);
 
         // agrupamos las acciones de facturas en un dropdown
         $this->tab($viewName)->addButtonGroup([
@@ -236,7 +234,7 @@ class EditAgente extends ComercialContactController
      */
     protected function loadLanguageValues(string $viewName): void
     {
-        $columnLangCode = $this->tab($viewName)->columnForName('language');
+        $columnLangCode = $this->views[$viewName]->columnForName('language');
         if ($columnLangCode && $columnLangCode->widget->getType() === 'select') {
             $langs = [];
             foreach (Tools::lang()->getAvailableLanguages() as $key => $value) {
@@ -249,5 +247,6 @@ class EditAgente extends ComercialContactController
 
     protected function setCustomWidgetValues(string $viewName): void
     {
+        ;
     }
 }

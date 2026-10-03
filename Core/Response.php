@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2024-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2024-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -38,22 +38,22 @@ final class Response
     public const HTTP_UNAUTHORIZED = 401;
     public const HTTP_UNPROCESSABLE_ENTITY = 422;
 
-    /** @var string Cuerpo de la respuesta que se enviará al cliente. */
+    /** Cuerpo de la respuesta que se enviará al cliente. @var string */
     private $content;
 
-    /** @var array Cookies pendientes de enviar, indexadas por nombre. */
+    /** Cookies pendientes de enviar, indexadas por nombre. @var array */
     private $cookies;
 
-    /** @var ResponseHeaders Cabeceras HTTP de la respuesta. */
+    /** Cabeceras HTTP de la respuesta. @var ResponseHeaders */
     public $headers;
 
-    /** @var int Código de estado HTTP. */
+    /** Código de estado HTTP. @var int */
     private $http_code;
 
-    /** @var bool Si es true, send()/sendHeaders() no emiten nada (útil en tests o CLI). */
+    /** Si es true, send()/sendHeaders() no emiten nada (útil en tests o CLI). @var bool */
     private $send_disabled = false;
 
-    /** @var bool Indica si la respuesta ya se ha enviado, para evitar enviarla dos veces. */
+    /** Indica si la respuesta ya se ha enviado, para evitar enviarla dos veces. @var bool */
     private $sent = false;
 
     /**
@@ -160,11 +160,6 @@ final class Response
         }
 
         $this->sendHeaders();
-
-        // descartamos los buffers de salida para no cargar el archivo entero en memoria
-        while (ob_get_level() > 0) {
-            ob_end_clean();
-        }
 
         readfile($real_path);
     }

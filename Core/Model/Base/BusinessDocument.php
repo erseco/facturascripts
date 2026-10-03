@@ -68,7 +68,7 @@ abstract class BusinessDocument extends NewModelClass
      */
     public $codigo;
 
-    /** @var array Campos que no se deben copiar al duplicar o transformar el documento. */
+    /** Campos que no se deben copiar al duplicar o transformar el documento. @var array */
     protected static $dont_copy_fields = ['codejercicio', 'codigo', 'codigorect', 'fecha', 'femail', 'hora',
         'idasiento', 'idestado', 'idfacturarect', 'neto', 'netosindto', 'numero', 'pagada', 'total', 'totalirpf',
         'totaliva', 'totalrecargo', 'totalsuplidos'];
@@ -452,14 +452,7 @@ abstract class BusinessDocument extends NewModelClass
 
         // comprobamos el número
         if ((int)$this->numero < 1) {
-            Tools::log()->error('invalid-number', [
-                '%number%' => $this->numero === null || $this->numero === '' ? Tools::trans('empty') : $this->numero,
-                'codejercicio' => $this->codejercicio,
-                'field' => 'numero',
-                'model-class' => $this->modelClassName(),
-                'model-code' => $this->id(),
-                'value' => $this->numero,
-            ]);
+            Tools::log()->error('invalid-number', ['%number%' => $this->numero]);
             return false;
         }
 

@@ -19,9 +19,7 @@
 
 namespace FacturaScripts\Core\Base\DataBase;
 
-use Exception;
 use FacturaScripts\Core\Base\DataBase;
-use FacturaScripts\Core\Where;
 
 /**
  * @deprecated Usar FacturaScripts\Core\Where en su lugar.
@@ -29,6 +27,9 @@ use FacturaScripts\Core\Where;
  * @author Carlos García Gómez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
  */
+#[Deprecated(
+    reason: 'Use FacturaScripts\Core\Where instead',
+)]
 class DataBaseWhere
 {
     /**
@@ -86,7 +87,7 @@ class DataBaseWhere
     {
         $this->dataBase = new DataBase();
         $this->fields = $fields;
-        $this->operation = $this->checkOperation($operation);
+        $this->operation = $operation;
         $this->operator = $operator;
         $this->value = $value;
         $this->useField = $useField;
@@ -177,7 +178,7 @@ class DataBaseWhere
 
         $result = $prefix . $result;
         if ($applyOperation) {
-            $result = ' ' . $this->checkOperation($this->operation) . ' ' . $result;
+            $result = ' ' . $this->operation . ' ' . $result;
         }
 
         return $result;
@@ -271,20 +272,6 @@ class DataBaseWhere
      *
      * @return string
      */
-    /**
-     * Devuelve el conector normalizado (AND u OR), ya que se concatena directamente en el SQL.
-     *
-     * @throws Exception
-     */
-    private function checkOperation($operation): string
-    {
-        if (false === Where::isValidOperation($operation)) {
-            throw new Exception('Invalid where operation: ' . (is_string($operation) ? $operation : gettype($operation)));
-        }
-
-        return strtoupper(trim($operation));
-    }
-
     private function escapeColumn(string $column): string
     {
         $exclude = ['.', 'CAST('];

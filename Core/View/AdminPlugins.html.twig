@@ -364,16 +364,9 @@
                         </p>
                     </div>
                     <div class="card-footer p-2 bg-transparent d-flex align-items-center justify-content-between">
-                        {% if plugin.installed %}
-                            <a href="#installed" class="btn btn-sm btn-outline-success"
-                               onclick="document.getElementById('installedPluginsTab').click();">
-                                <i class="fa-solid fa-check fa-fw me-1" aria-hidden="true"></i> {{ trans('installed') }}
-                            </a>
-                        {% else %}
-                            <a href="{{ plugin.url }}" class="btn btn-sm btn-success" target="_blank">
-                                <i class="fa-solid fa-plus fa-fw me-1" aria-hidden="true"></i> {{ trans('add') }}
-                            </a>
-                        {% endif %}
+                        <a href="{{ plugin.url }}" class="btn btn-sm btn-success" target="_blank">
+                            <i class="fa-solid fa-plus fa-fw me-1" aria-hidden="true"></i> {{ trans('add') }}
+                        </a>
                         <span class="text-danger small" title="{{ trans('health') }}">
                             {{ _self.healthStatus(plugin.health) }}
                         </span>

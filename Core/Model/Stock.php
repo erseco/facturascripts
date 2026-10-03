@@ -40,34 +40,34 @@ class Stock extends ModelClass
 
     const MAX_DECIMALS = 3;
 
-    /** @var float|int Cantidad física almacenada. */
+    /** Cantidad física almacenada. @var float|int */
     public $cantidad;
 
-    /** @var string Código del almacén al que corresponde el stock. */
+    /** Código del almacén al que corresponde el stock. @var string */
     public $codalmacen;
 
-    /** @var float|int Cantidad disponible tras descontar la reservada. */
+    /** Cantidad disponible tras descontar la reservada. @var float|int */
     public $disponible;
 
-    /** @var int Identificador único del registro de stock. */
+    /** Identificador único del registro de stock. @var int */
     public $idstock;
 
-    /** @var float|int Cantidad pendiente de recibir de proveedores. */
+    /** Cantidad pendiente de recibir de proveedores. @var float|int */
     public $pterecibir;
 
-    /** @var string Referencia de la variante del producto. */
+    /** Referencia de la variante del producto. @var string */
     public $referencia;
 
-    /** @var float|int Cantidad reservada en pedidos de clientes. */
+    /** Cantidad reservada en pedidos de clientes. @var float|int */
     public $reservada;
 
-    /** @var float|int Cantidad máxima de stock recomendada. */
+    /** Cantidad máxima de stock recomendada. @var float|int */
     public $stockmax;
 
-    /** @var float|int Cantidad mínima de stock recomendada. */
+    /** Cantidad mínima de stock recomendada. @var float|int */
     public $stockmin;
 
-    /** @var string Ubicación física del producto dentro del almacén. */
+    /** Ubicación física del producto dentro del almacén. @var string */
     public $ubicacion;
 
     public function clear(): void

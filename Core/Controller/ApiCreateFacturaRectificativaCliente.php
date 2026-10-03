@@ -25,9 +25,6 @@ use FacturaScripts\Core\Template\ApiController;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 
-/**
- * Controlador de la API para crear una factura rectificativa de cliente.
- */
 class ApiCreateFacturaRectificativaCliente extends ApiController
 {
     protected function runResource(): void
@@ -84,25 +81,6 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
 
         $lines = [];
         $invoiceLines = $invoice->getLines();
-
-        // cada refund_X debe corresponder al idlinea de una línea de la factura,
-        // si no, acabaríamos rectificando la factura completa sin avisar
-        $lineIds = [];
-        foreach ($invoiceLines as $line) {
-            $lineIds[] = 'refund_' . $line->id();
-        }
-        foreach (array_keys($this->request->request->all()) as $key) {
-            if (str_starts_with((string)$key, 'refund_') && !in_array($key, $lineIds, true)) {
-                $this->response
-                    ->setHttpCode(Response::HTTP_BAD_REQUEST)
-                    ->json([
-                        'status' => 'error',
-                        'message' => $key . ' does not match any idlinea of the invoice',
-                    ]);
-                return null;
-            }
-        }
-
         foreach ($invoiceLines as $line) {
             $quantity = (float)$this->request->input('refund_' . $line->id(), '0');
             if (!empty($quantity)) {
@@ -142,9 +120,8 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
         $newRefund->nick = $this->request->input('nick');
         $newRefund->observaciones = $this->request->input('observaciones');
 
-        // la hora es opcional: si no se indica, se usa la actual
         $date = $this->request->input('fecha');
-        $hour = $this->request->input('hora') ?: $newRefund->hora;
+        $hour = $this->request->input('hora');
         if (false === $newRefund->setDate($date, $hour)) {
             $this->sendError('error-set-date', Response::HTTP_BAD_REQUEST);
             $this->db()->rollback();
@@ -184,11 +161,8 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
             }
         }
 
-        // asignamos el estado indicado; si no se indica, conserva el de la factura original
-        $idestado = $this->request->input('idestado');
-        if (!empty($idestado)) {
-            $newRefund->idestado = $idestado;
-        }
+        // asignamos el estado de la factura
+        $newRefund->idestado = $this->request->input('idestado');
         if (false === $newRefund->save()) {
             $this->sendError('record-save-error', Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->db()->rollback();

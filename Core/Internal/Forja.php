@@ -44,36 +44,7 @@ final class Forja
             });
         }
 
-        if (!is_array(self::$builds)) {
-            return [];
-        }
-
-        $result = [];
-        foreach (self::$builds as $project) {
-            if (
-                !is_array($project) ||
-                !isset($project['project'], $project['name']) ||
-                !is_int($project['project']) ||
-                !is_string($project['name']) ||
-                !isset($project['builds']) ||
-                !is_array($project['builds'])
-            ) {
-                continue;
-            }
-
-            $project['builds'] = array_values(array_filter($project['builds'], static function ($build): bool {
-                return is_array($build) &&
-                    isset($build['version'], $build['stable'], $build['beta']) &&
-                    is_numeric($build['version']) &&
-                    is_bool($build['stable']) &&
-                    is_bool($build['beta']) &&
-                    array_key_exists('mincore', $build) &&
-                    array_key_exists('maxcore', $build);
-            }));
-            $result[] = $project;
-        }
-
-        return $result;
+        return self::$builds ?? [];
     }
 
     public static function canUpdateCore(): bool
@@ -125,12 +96,6 @@ final class Forja
             });
         }
 
-        if (!is_array(self::$pluginList)) {
-            return [];
-        }
-
-        return array_values(array_filter(self::$pluginList, static function ($item): bool {
-            return is_array($item) && isset($item['name']) && is_string($item['name']);
-        }));
+        return self::$pluginList ?? [];
     }
 }

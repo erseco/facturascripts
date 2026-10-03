@@ -49,9 +49,6 @@ use FacturaScripts\Dinamic\Model\ReciboProveedor;
 use FacturaScripts\Dinamic\Model\WorkEvent;
 use ParseCsv\Csv;
 
-/**
- * Controlador que ejecuta las tareas programadas (cron) del núcleo y de los plugins.
- */
 class Cron implements ControllerInterface
 {
     public function __construct(string $className, string $url = '')
@@ -68,6 +65,7 @@ class Cron implements ControllerInterface
         header('Content-Type: text/plain');
         $this->echoLogo();
 
+        Tools::log('cron')->notice('starting-cron');
         echo PHP_EOL . PHP_EOL . Tools::trans('starting-cron');
         ob_flush();
 
@@ -101,6 +99,7 @@ class Cron implements ControllerInterface
             '%memoryUsed%' => $this->getMemorySize(memory_get_peak_usage())
         ];
         echo PHP_EOL . PHP_EOL . Tools::trans('finished-cron', $context) . PHP_EOL . PHP_EOL;
+        Tools::log()->notice('finished-cron', $context);
     }
 
     private function echoLogo(): void
@@ -293,6 +292,7 @@ END;
             }
 
             echo PHP_EOL . Tools::trans('running-plugin-cron', ['%pluginName%' => $pluginName]) . ' ... ';
+            Tools::log('cron')->notice('running-plugin-cron', ['%pluginName%' => $pluginName]);
 
             try {
                 $cron = new $cronClass($pluginName);
@@ -307,8 +307,8 @@ END;
             // si se ha superado el tiempo máximo de ejecución definido, se detiene
             if (CronJob::isMaxExecutionTimeReached()) {
                 echo PHP_EOL . PHP_EOL . Tools::trans('cron-max-execution-time-reached', [
-                        '%seconds%' => CronJob::getMaxExecutionTime(),
-                    ]);
+                    '%seconds%' => CronJob::getMaxExecutionTime(),
+                ]);
                 break;
             }
 
@@ -340,8 +340,8 @@ END;
             // si se ha superado el tiempo máximo de ejecución definido, terminamos
             if (CronJob::isMaxExecutionTimeReached()) {
                 echo PHP_EOL . PHP_EOL . Tools::trans('cron-max-execution-time-reached', [
-                        '%seconds%' => CronJob::getMaxExecutionTime(),
-                    ]);
+                    '%seconds%' => CronJob::getMaxExecutionTime(),
+                ]);
                 return;
             }
 

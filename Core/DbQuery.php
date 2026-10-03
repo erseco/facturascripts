@@ -27,7 +27,7 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
  * Query builder fluido para construir y ejecutar consultas SQL contra la base de datos.
  *
  * Ofrece una API encadenable al estilo de Laravel/Eloquent: se parte de `DbQuery::table('tabla')`
- * y se van añadiendo cláusulas (`select`, `join`, `where*`, `orderBy`, `groupBy`, `limit`, ...) hasta
+ * y se van añadiendo cláusulas (`select`, `where*`, `orderBy`, `groupBy`, `limit`, ...) hasta
  * ejecutar la consulta con un método terminal (`get`, `first`, `count`, `sum`, `delete`,
  * `insert`, `update`, etc.). Internamente comparte una conexión perezosa singleton (`self::db()`).
  *
@@ -43,34 +43,31 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
  */
 final class DbQuery
 {
-    /** @var DataBase Conexión compartida perezosa para todas las instancias del builder. */
+    /** Conexión compartida perezosa para todas las instancias del builder. @var DataBase */
     private static $db;
 
-    /** @var string Lista de campos del SELECT (ya escapados o en bruto si vinieron de selectRaw). */
+    /** Lista de campos del SELECT (ya escapados o en bruto si vinieron de selectRaw). @var string */
     public $fields = '*';
 
-    /** @var string Cláusula GROUP BY ya construida (campos escapados separados por coma). */
+    /** Cláusula GROUP BY ya construida (campos escapados separados por coma). @var string */
     public $groupBy;
 
-    /** @var string Cláusula HAVING en bruto. */
+    /** Cláusula HAVING en bruto. @var string */
     public $having;
 
-    /** @var int Límite de filas. 0 significa sin límite. */
+    /** Límite de filas. 0 significa sin límite. @var int */
     public $limit = 0;
 
-    /** @var int Desplazamiento de filas para paginación. */
+    /** Desplazamiento de filas para paginación. @var int */
     public $offset = 0;
 
-    /** @var array Lista de fragmentos `campo ASC|DESC` ya construidos para el ORDER BY. */
+    /** Lista de fragmentos `campo ASC|DESC` ya construidos para el ORDER BY. @var array */
     public $orderBy = [];
 
-    /** @var array Lista de uniones estructuradas pendientes de añadir a la consulta. */
-    private $joins = [];
-
-    /** @var string Nombre de la tabla destino, sin escapar. */
+    /** Nombre de la tabla destino, sin escapar. @var string */
     private $table;
 
-    /** @var Where[] Cláusulas WHERE acumuladas, combinadas con AND al construir el SQL. */
+    /** Cláusulas WHERE acumuladas, combinadas con AND al construir el SQL. @var Where[] */
     private $where = [];
 
     /** Inicia una consulta sobre la tabla indicada; usar preferentemente el factory `DbQuery::table()`. */
@@ -296,32 +293,6 @@ final class DbQuery
         return null;
     }
 
-    /** Añade un INNER JOIN al SELECT entre dos columnas completamente cualificadas. */
-    public function join(string $table, string $leftColumn, string $rightColumn): self
-    {
-        $this->joins[] = [
-            'type' => 'INNER',
-            'table' => $table,
-            'left' => $leftColumn,
-            'right' => $rightColumn,
-        ];
-
-        return $this;
-    }
-
-    /** Añade un LEFT JOIN al SELECT entre dos columnas completamente cualificadas. */
-    public function leftJoin(string $table, string $leftColumn, string $rightColumn): self
-    {
-        $this->joins[] = [
-            'type' => 'LEFT',
-            'table' => $table,
-            'left' => $leftColumn,
-            'right' => $rightColumn,
-        ];
-
-        return $this;
-    }
-
     /** Establece el LIMIT de la consulta; 0 significa sin límite. */
     public function limit(int $limit): self
     {
@@ -510,12 +481,6 @@ final class DbQuery
     public function sql(): string
     {
         $sql = 'SELECT ' . $this->fields . ' FROM ' . self::db()->escapeColumn($this->table);
-
-        foreach ($this->joins as $join) {
-            $sql .= ' ' . $join['type'] . ' JOIN ' . self::db()->escapeColumn($join['table'])
-                . ' ON ' . self::db()->escapeColumn($join['left'])
-                . ' = ' . self::db()->escapeColumn($join['right']);
-        }
 
         if (!empty($this->where)) {
             $sql .= Where::multiSqlLegacy($this->where);

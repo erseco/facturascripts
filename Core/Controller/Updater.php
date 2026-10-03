@@ -19,7 +19,6 @@
 
 namespace FacturaScripts\Core\Controller;
 
-use FacturaScripts\Core\AppKey;
 use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\ControllerPermissions;
 use FacturaScripts\Core\Cache;
@@ -27,7 +26,6 @@ use FacturaScripts\Core\Http;
 use FacturaScripts\Core\Internal\Forja;
 use FacturaScripts\Core\Internal\Plugin;
 use FacturaScripts\Core\Kernel;
-use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Migrations;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Response;
@@ -37,7 +35,7 @@ use FacturaScripts\Dinamic\Model\User;
 use ZipArchive;
 
 /**
- * Controlador para actualizar el núcleo de FacturaScripts y los plugins instalados.
+ * Description of Updater
  *
  * @author Carlos García Gómez <carlos@facturascripts.com>
  */
@@ -118,34 +116,20 @@ class Updater extends Controller
      */
     public function privateCore(&$response, $user, $permissions)
     {
-        // solo los administradores pueden usar esta página
-        if (false === $user->admin) {
-            throw new KernelException('AccessDenied', Tools::trans('access-denied'));
-        }
-
         parent::privateCore($response, $user, $permissions);
 
         $this->telemetryManager = new Telemetry();
 
-        // avisamos si falta la clave de la instalación en el config.php, proponiendo una nueva
-        if (AppKey::isDerived()) {
-            Tools::log()->warning('app-key-missing', [
-                '%line%' => "define('FS_APP_KEY', '" . AppKey::generate() . "');"
+        // Folders writable?
+        $folders = $this->notWritableFolders();
+        if ($folders) {
+            Tools::log()->warning('folders-not-writable', [
+                '%folders%' => implode(', ', $folders)
             ]);
+            return;
         }
 
-        // en las acciones que escriben en disco, comprobamos que las carpetas sean escribibles
         $action = $this->request->get('action', '');
-        if (in_array($action, ['cancel', 'download', 'post-update', 'update'])) {
-            $folders = $this->notWritableFolders();
-            if ($folders) {
-                Tools::log()->warning('folders-not-writable', [
-                    '%folders%' => implode(', ', $folders)
-                ]);
-                return;
-            }
-        }
-
         $this->execAction($action);
     }
 

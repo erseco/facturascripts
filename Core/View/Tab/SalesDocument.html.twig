@@ -85,17 +85,6 @@
         return salesFormAction('create-customer', '0');
     }
 
-    function newCustomerKeyDown(event) {
-        // al pulsar intro en un campo del modal, guardamos el cliente como con el botón guardar
-        if (event.key !== 'Enter' || event.repeat || event.isComposing || event.target.tagName !== 'INPUT') {
-            return true;
-        }
-
-        event.preventDefault();
-        createCustomerFromSales();
-        return false;
-    }
-
     function showCustomerModal() {
         $('#newCustomerModal').one('hidden.bs.modal', function () {
             $('#findCustomerModal').modal('show');
@@ -144,14 +133,6 @@
             if (typeof data.multireqtoken === 'string') {
                 document.forms['salesForm']['multireqtoken'].value = data.multireqtoken;
             }
-            if (data.duplicatedCifnif === true) {
-                if (false === confirm(data.duplicatedCifnifMessage)) {
-                    return;
-                }
-                document.forms['salesForm']['newcustomer_cifnif_confirmed'].value = '1';
-                salesFormAction('create-customer', '0');
-                return;
-            }
             if (data.customerCreated === true) {
                 $('#newCustomerModal').modal('hide');
                 document.getElementById('newCustomerName').closest('.modal-body').querySelectorAll('input').forEach(function (input) {
@@ -165,11 +146,8 @@
                 document.getElementById("salesFormLines").innerHTML = data.lines;
             } else {
                 $.each(data.linesMap, function (index, value) {
-                    // no reescribimos un campo que ya tiene ese valor: si el usuario está escribiendo
-                    // en él (p.ej. "16," a falta de los decimales), perdería lo que lleva escrito
-                    let field = document.forms['salesForm'][index];
-                    if (field != null && field.value != value) {
-                        field.value = value;
+                    if (document.forms['salesForm'][index] != null) {
+                        document.forms['salesForm'][index].value = value;
                     }
                 });
             }
@@ -250,12 +228,6 @@
             return false;
         }
 
-        // si el número está a medio escribir (p.ej. "16,"), algunos navegadores dan un valor vacío
-        // y recalcular pondría el campo a 0: esperamos a que el número vuelva a ser válido
-        if (event.target && event.target.validity && event.target.validity.badInput) {
-            return false;
-        }
-
         // obtenemos el name del input si cumple la condición de pulsado
         if ($(event.target).is('input') && ['keyup', 'keypress', 'change'].includes(event.type)) {
             keyupInputName = event.target.name;
@@ -299,10 +271,6 @@
                 data.messages.forEach(item => alert(item.message));
             }
             if (data.ok) {
-                const navfrom = new URLSearchParams(window.location.search).get('navfrom');
-                if (navfrom) {
-                    data.newurl += (data.newurl.includes('?') ? '&' : '?') + 'navfrom=' + encodeURIComponent(navfrom);
-                }
                 window.location.replace(data.newurl);
             } else {
                 animateSpinner('remove', true);
@@ -328,9 +296,6 @@
         const total = parseFloat(prompt('{{ trans('total-with-taxes') }}').replace(',', '.')) || 0;
         const dtopor = parseFloat(document.forms['salesForm']['dtopor_' + id].value) || 0;
         const dtopor2 = parseFloat(document.forms['salesForm']['dtopor2_' + id].value) || 0;
-        const globalDtopor = parseFloat(document.forms['salesForm']['dtopor1'].value) || 0;
-        const globalDtopor2 = parseFloat(document.forms['salesForm']['dtopor2'].value) || 0;
-        const globalDiscount = (100 - globalDtopor) * (100 - globalDtopor2) / 10000;
         const iva = parseFloat(document.forms['salesForm']['iva_' + id].value) || 0;
         const recargo = document.forms['salesForm']['recargo_' + id] ? parseFloat(document.forms['salesForm']['recargo_' + id].value) || 0 : 0;
         const irpf = parseFloat(document.forms['salesForm']['irpf_' + id].value) || 0;
@@ -341,7 +306,7 @@
             alert('cantidad > 0');
         } else {
             let pvpSinDto = (100 * total / cantidad) / (100 + iva + recargo - irpf);
-            let pvp = 10000 * pvpSinDto / ((100 - dtopor) * (100 - dtopor2) * globalDiscount);
+            let pvp = 10000 * pvpSinDto / ((100 - dtopor) * (100 - dtopor2));
             document.forms['salesForm']['pvpunitario_' + id].value = Math.round(pvp * 100000) / 100000;
             salesFormAction('recalculate', '0');
         }

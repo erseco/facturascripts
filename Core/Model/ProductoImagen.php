@@ -46,19 +46,19 @@ class ProductoImagen extends ModelClass
 
     const THUMBNAIL_PATH = '/MyFiles/Tmp/Thumbnails/';
 
-    /** @var int Identificador único de la relación entre producto e imagen. */
+    /** Identificador único de la relación entre producto e imagen. @var int */
     public $id;
 
-    /** @var int Identificador del archivo de imagen adjunto. */
+    /** Identificador del archivo de imagen adjunto. @var int */
     public $idfile;
 
-    /** @var int Identificador del producto asociado. */
+    /** Identificador del producto asociado. @var int */
     public $idproducto;
 
-    /** @var int Posición utilizada para ordenar las imágenes del producto. */
+    /** Posición utilizada para ordenar las imágenes del producto. @var int */
     public $orden;
 
-    /** @var string Referencia de la variante asociada a la imagen. */
+    /** Referencia de la variante asociada a la imagen. @var string */
     public $referencia;
 
     public function __construct(array $data = [])
@@ -75,17 +75,17 @@ class ProductoImagen extends ModelClass
             return false;
         }
 
-        // obtenemos el prefijo único de las miniaturas del archivo
-        $prefix = $this->getThumbnailPrefix($this->getFile());
-        if (empty($prefix)) {
+        // obtenemos el nombre del archivo sin la extensión
+        $name = pathinfo($this->getFile()->filename, PATHINFO_FILENAME);
+        if (empty($name)) {
             return true;
         }
 
-        // borramos todas las miniaturas que empiecen por ese prefijo
+        // borramos todas las miniaturas que empiecen por ese nombre
         $path = FS_FOLDER . self::THUMBNAIL_PATH;
         if (file_exists($path)) {
             foreach (scandir($path) as $file) {
-                if (strpos($file, $prefix . '_') === 0) {
+                if (strpos($file, $name) === 0) {
                     unlink($path . $file);
                 }
             }
@@ -138,12 +138,8 @@ class ProductoImagen extends ModelClass
             return '';
         }
 
-        // construimos el nombre de la miniatura con el idfile para evitar colisiones
-        $prefix = $this->getThumbnailPrefix($file);
-        if (empty($prefix)) {
-            return '';
-        }
-        $thumbName = $prefix . '_' . $width . 'x' . $height . '.' . $ext;
+        // construimos el nombre de la miniatura
+        $thumbName = pathinfo($file->filename, PATHINFO_FILENAME) . '_' . $width . 'x' . $height . '.' . $ext;
 
         // si ya existe la devolvemos sin regenerarla
         $thumbFile = self::THUMBNAIL_PATH . $thumbName;
@@ -196,9 +192,9 @@ class ProductoImagen extends ModelClass
     {
         $result = [];
 
-        // prefijo único del archivo
-        $prefix = $this->getThumbnailPrefix($this->getFile());
-        if (empty($prefix)) {
+        // nombre del archivo sin extensión
+        $name = pathinfo($this->getFile()->filename, PATHINFO_FILENAME);
+        if (empty($name)) {
             return $result;
         }
 
@@ -207,12 +203,12 @@ class ProductoImagen extends ModelClass
             return $result;
         }
 
-        // buscamos solo las miniaturas de este archivo (idfile_nombre_ANCHOxALTO.ext) con glob,
+        // buscamos solo las miniaturas de este archivo (nombre_ANCHOxALTO.ext) con glob,
         // así filtramos a nivel de sistema en lugar de recorrer toda la carpeta de miniaturas
-        $pattern = $path . self::globEscape($prefix) . '_*x*.*';
+        $pattern = $path . self::globEscape($name) . '_*x*.*';
         foreach (glob($pattern, GLOB_NOSORT) ?: [] as $fullPath) {
             $file = basename($fullPath);
-            if (preg_match('/^' . preg_quote($prefix, '/') . '_(\d+)x(\d+)\.[a-z0-9]+$/i', $file, $matches)) {
+            if (preg_match('/^' . preg_quote($name, '/') . '_(\d+)x(\d+)\.[a-z0-9]+$/i', $file, $matches)) {
                 // sin barra inicial, igual que el core (MyFiles/... en lugar de /MyFiles/...)
                 $relative = ltrim(self::THUMBNAIL_PATH, '/') . $file;
                 $result[] = [
@@ -233,12 +229,6 @@ class ProductoImagen extends ModelClass
     private static function globEscape(string $value): string
     {
         return preg_replace('/[*?\[\]]/', '[$0]', $value);
-    }
-
-    private function getThumbnailPrefix(AttachedFile $file): string
-    {
-        $name = pathinfo($file->filename, PATHINFO_FILENAME);
-        return empty($file->idfile) || empty($name) ? '' : $file->idfile . '_' . $name;
     }
 
     public function install(): string

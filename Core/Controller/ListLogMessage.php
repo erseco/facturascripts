@@ -25,7 +25,7 @@ use FacturaScripts\Dinamic\Model\CronJob;
 use FacturaScripts\Dinamic\Model\LogMessage;
 
 /**
- * Controlador para listar los elementos del modelo LogMessage
+ * Controller to list the items in the LogMessage model
  *
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  * @author Francesc Pineda Segarra      <francesc.pineda.segarra@gmail.com>
@@ -60,7 +60,6 @@ class ListLogMessage extends ListController
             ->addOrderBy(['date'], 'date')
             ->addOrderBy(['duration'], 'duration')
             ->addOrderBy(['daily_exec'], 'daily-executions')
-            ->addOrderBy(['fails'], 'fails')
             ->setSettings('btnNew', false)
             ->addFilterPeriod('date', 'period', 'date', true)
             ->addFilterSelect('pluginname', 'plugin', 'pluginname', $plugins)
@@ -68,8 +67,7 @@ class ListLogMessage extends ListController
                 '' => '------',
                 '0' => Tools::trans('disabled'),
                 '1' => Tools::trans('enabled'),
-            ])
-            ->addFilterCheckbox('failed', 'failed', 'failed');
+            ]);
 
         // añadimos los botones de activar y desactivar
         $this->tab($viewName)->addButton([

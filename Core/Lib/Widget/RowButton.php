@@ -218,11 +218,9 @@ class RowButton extends VisualItem
     protected function getOnClickValue(string $viewName, string $jsFunction): string
     {
         if ($this->confirm) {
-            $btnClass = empty($this->color) ? 'btn-danger' : $this->colorToClass($this->color, 'btn-');
             return 'confirmAction(\'' . $viewName . '\',\'' . $this->action . '\',\''
                 . $this->label . '\',\'' . Tools::trans('are-you-sure-action') . '\',\''
-                . Tools::trans('cancel') . '\',\'' . Tools::trans('confirm') . '\',\''
-                . $this->icon . '\',\'' . $btnClass . '\');';
+                . Tools::trans('cancel') . '\',\'' . Tools::trans('confirm') . '\');';
         }
 
         if (empty($jsFunction)) {

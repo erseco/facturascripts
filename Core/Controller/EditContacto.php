@@ -28,7 +28,7 @@ use FacturaScripts\Dinamic\Model\Contacto;
 use FacturaScripts\Dinamic\Model\RoleAccess;
 
 /**
- * Controlador para editar un único elemento del modelo Contacto
+ * Controller to edit a single item from the Contacto model
  *
  * @author Carlos García Gómez <carlos@facturascripts.com>
  */
@@ -41,7 +41,7 @@ class EditContacto extends EditController
     public function getImageUrl(): string
     {
         $mvn = $this->mainTabName();
-        return $this->tab($mvn)->model->gravatar();
+        return $this->views[$mvn]->model->gravatar();
     }
 
     public function getModelClassName(): string
@@ -89,7 +89,6 @@ class EditContacto extends EditController
             return true;
         }
 
-        $this->assertOwnerData($model);
         $model->checkVies();
         return true;
     }
@@ -97,15 +96,13 @@ class EditContacto extends EditController
     protected function createCustomerAction(): void
     {
         $access = $this->getRolePermissions('EditCliente');
-        if (false === $this->permissions->allowUpdate || false === $access['allowupdate']) {
+        if (false === $access['allowupdate']) {
             Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
             return;
         }
 
         $mvn = $this->mainTabName();
-        $customer = $this->tab($mvn)->model->getCustomer();
+        $customer = $this->views[$mvn]->model->getCustomer();
         if ($customer->exists()) {
             Tools::log()->notice('record-updated-correctly');
             $this->redirect($customer->url() . '&action=save-ok');
@@ -134,15 +131,13 @@ class EditContacto extends EditController
     protected function createSupplierAction(): void
     {
         $access = $this->getRolePermissions('EditProveedor');
-        if (false === $this->permissions->allowUpdate || false === $access['allowupdate']) {
+        if (false === $access['allowupdate']) {
             Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
             return;
         }
 
         $mvn = $this->mainTabName();
-        $supplier = $this->tab($mvn)->model->getSupplier();
+        $supplier = $this->views[$mvn]->model->getSupplier();
         if ($supplier->exists()) {
             Tools::log()->notice('record-updated-correctly');
             $this->redirect($supplier->url() . '&action=save-ok');
@@ -314,7 +309,7 @@ class EditContacto extends EditController
      */
     protected function loadLanguageValues(string $viewName): void
     {
-        $columnLangCode = $this->tab($viewName)->columnForName('language');
+        $columnLangCode = $this->views[$viewName]->columnForName('language');
         if ($columnLangCode && $columnLangCode->widget->getType() === 'select') {
             $langs = [];
             foreach (Tools::lang()->getAvailableLanguages() as $key => $value) {

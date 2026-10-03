@@ -94,7 +94,6 @@ class MAILExport extends ParentClass
         }
 
         $this->sendParams['fileName'] = $fileName;
-        $this->sendParams['attachName'] = $this->getFileName() . '.pdf';
         $response->headers->set('Refresh', '0; SendMail?' . http_build_query($this->sendParams));
     }
 }

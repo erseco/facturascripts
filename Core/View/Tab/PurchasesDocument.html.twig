@@ -85,17 +85,6 @@
         return purchasesFormAction('create-supplier', '0');
     }
 
-    function newSupplierKeyDown(event) {
-        // al pulsar intro en un campo del modal, guardamos el proveedor como con el botón guardar
-        if (event.key !== 'Enter' || event.repeat || event.isComposing || event.target.tagName !== 'INPUT') {
-            return true;
-        }
-
-        event.preventDefault();
-        createSupplierFromPurchases();
-        return false;
-    }
-
     function showSupplierModal() {
         $('#newSupplierModal').one('hidden.bs.modal', function () {
             $('#findSupplierModal').modal('show');
@@ -144,14 +133,6 @@
             if (typeof data.multireqtoken === 'string') {
                 document.forms['purchasesForm']['multireqtoken'].value = data.multireqtoken;
             }
-            if (data.duplicatedCifnif === true) {
-                if (false === confirm(data.duplicatedCifnifMessage)) {
-                    return;
-                }
-                document.forms['purchasesForm']['newsupplier_cifnif_confirmed'].value = '1';
-                purchasesFormAction('create-supplier', '0');
-                return;
-            }
             if (data.supplierCreated === true) {
                 $('#newSupplierModal').modal('hide');
                 document.getElementById('newSupplierName').closest('.modal-body').querySelectorAll('input').forEach(function (input) {
@@ -160,19 +141,13 @@
             }
             if (data.header !== '') {
                 document.getElementById("purchasesFormHeader").innerHTML = data.header;
-                if (typeof checkDuplicatedNumProveedor === 'function') {
-                    checkDuplicatedNumProveedor();
-                }
             }
             if (data.lines !== '') {
                 document.getElementById("purchasesFormLines").innerHTML = data.lines;
             } else {
                 $.each(data.linesMap, function (index, value) {
-                    // no reescribimos un campo que ya tiene ese valor: si el usuario está escribiendo
-                    // en él (p.ej. "16," a falta de los decimales), perdería lo que lleva escrito
-                    let field = document.forms['purchasesForm'][index];
-                    if (field != null && field.value != value) {
-                        field.value = value;
+                    if (document.forms['purchasesForm'][index] != null) {
+                        document.forms['purchasesForm'][index].value = value;
                     }
                 });
             }
@@ -253,12 +228,6 @@
             return false;
         }
 
-        // si el número está a medio escribir (p.ej. "16,"), algunos navegadores dan un valor vacío
-        // y recalcular pondría el campo a 0: esperamos a que el número vuelva a ser válido
-        if (event.target && event.target.validity && event.target.validity.badInput) {
-            return false;
-        }
-
         // obtenemos el name del input si cumple la condición de pulsado
         if ($(event.target).is('input') && ['keyup', 'keypress', 'change'].includes(event.type)) {
             keyupInputName = event.target.name;
@@ -302,10 +271,6 @@
                 data.messages.forEach(item => alert(item.message));
             }
             if (data.ok) {
-                const navfrom = new URLSearchParams(window.location.search).get('navfrom');
-                if (navfrom) {
-                    data.newurl += (data.newurl.includes('?') ? '&' : '?') + 'navfrom=' + encodeURIComponent(navfrom);
-                }
                 window.location.replace(data.newurl);
             } else {
                 animateSpinner('remove', true);
@@ -331,9 +296,6 @@
         const total = parseFloat(prompt('{{ trans('total-with-taxes') }}').replace(',', '.')) || 0;
         const dtopor = parseFloat(document.forms['purchasesForm']['dtopor_' + id].value) || 0;
         const dtopor2 = parseFloat(document.forms['purchasesForm']['dtopor2_' + id].value) || 0;
-        const globalDtopor = parseFloat(document.forms['purchasesForm']['dtopor1'].value) || 0;
-        const globalDtopor2 = parseFloat(document.forms['purchasesForm']['dtopor2'].value) || 0;
-        const globalDiscount = (100 - globalDtopor) * (100 - globalDtopor2) / 10000;
         const iva = parseFloat(document.forms['purchasesForm']['iva_' + id].value) || 0;
         const recargo = document.forms['purchasesForm']['recargo_' + id] ? parseFloat(document.forms['purchasesForm']['recargo_' + id].value) || 0 : 0;
         const irpf = parseFloat(document.forms['purchasesForm']['irpf_' + id].value) || 0;
@@ -344,7 +306,7 @@
             alert('cantidad > 0');
         } else {
             let pvpSinDto = (100 * total / cantidad) / (100 + iva + recargo - irpf);
-            let pvp = 10000 * pvpSinDto / ((100 - dtopor) * (100 - dtopor2) * globalDiscount);
+            let pvp = 10000 * pvpSinDto / ((100 - dtopor) * (100 - dtopor2));
             document.forms['purchasesForm']['pvpunitario_' + id].value = Math.round(pvp * 100000) / 100000;
             purchasesFormAction('recalculate', '0');
         }

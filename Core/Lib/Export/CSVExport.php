@@ -64,14 +64,17 @@ class CSVExport extends ExportBase
      */
     public function addBusinessDocPage($model): bool
     {
-        // los campos de las líneas se obtienen de una línea nueva, así todos los
-        // documentos exportados tienen las mismas columnas, aunque no tengan líneas
-        $lineFields = $this->getModelFields($model->getNewLine());
-        $fields = array_merge($lineFields, $this->getModelFields($model));
-
         $data = [];
+        $fields = [];
+
         $data1 = $this->getCursorRawData([$model]);
         foreach ($model->getLines() as $line) {
+            if (empty($fields)) {
+                $fields1 = $this->getModelFields($model);
+                $fields2 = $this->getModelFields($line);
+                $fields = array_merge($fields2, $fields1);
+            }
+
             // combinamos los datos de la línea con los del documento
             $data2 = $this->getCursorRawData([$line]);
             $data[] = array_merge($data2[0], $data1[0]);
@@ -79,11 +82,11 @@ class CSVExport extends ExportBase
 
         // sin líneas, exportamos solamente los datos del documento
         if (empty($data)) {
-            $data[] = array_merge(array_fill_keys(array_keys($lineFields), ''), $data1[0]);
+            $fields = $this->getModelFields($model);
+            $data = $data1;
         }
 
-        // todos los documentos van en la misma tabla: solo el primero lleva cabecera
-        $this->writeData($data, empty($this->csv) ? $fields : []);
+        $this->writeData($data, $fields);
 
         // no continuamos con la exportación
         return false;
@@ -105,15 +108,14 @@ class CSVExport extends ExportBase
     {
         $this->setFileName($title);
 
-        // usamos las columnas visibles de la vista; si no hay, todos los campos del modelo
-        $fields = empty($columns) ? $this->getModelFields($model) : $this->getColumnTitles($columns);
+        $fields = $this->getModelFields($model);
         $cursor = $model->all($where, $order, $offset, self::LIST_LIMIT);
         if (empty($cursor)) {
             $this->writeData([], $fields);
         }
 
         while (!empty($cursor)) {
-            $data = empty($columns) ? $this->getCursorRawData($cursor) : $this->getCursorData($cursor, $columns);
+            $data = $this->getCursorRawData($cursor);
             $this->writeData($data, $fields);
             $fields = [];
 
@@ -142,12 +144,9 @@ class CSVExport extends ExportBase
      */
     public function addModelPage($model, $columns, $title = ''): bool
     {
-        // usamos las columnas visibles de la vista; si no hay, todos los campos del modelo
-        $fields = empty($columns) ? $this->getModelFields($model) : $this->getColumnTitles($columns);
-        $data = empty($columns) ? $this->getCursorRawData([$model]) : $this->getCursorData([$model], $columns);
-
-        // todos los registros van en la misma tabla: solo el primero lleva cabecera
-        $this->writeData($data, empty($this->csv) ? $fields : []);
+        $fields = $this->getModelFields($model);
+        $data = $this->getCursorRawData([$model]);
+        $this->writeData($data, $fields);
 
         // no continuamos con la exportación
         return false;

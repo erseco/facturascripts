@@ -34,13 +34,13 @@ class Fabricante extends ModelClass
 {
     use ModelTrait;
 
-    /** @var string Código identificativo del fabricante. */
+    /** Código identificativo del fabricante. @var string */
     public $codfabricante;
 
-    /** @var string Nombre del fabricante. */
+    /** Nombre del fabricante. @var string */
     public $nombre;
 
-    /** @var int Número de productos asociados al fabricante. */
+    /** Número de productos asociados al fabricante. @var int */
     public $numproductos;
 
     public function clear(): void

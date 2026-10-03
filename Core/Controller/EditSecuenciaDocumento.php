@@ -25,7 +25,7 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 
 /**
- * Controlador para editar un único elemento del modelo SecuenciaDocumento
+ * Controller to edit a single item from the SecuenciaDocumento model.
  *
  * @author Carlos García Gómez          <carlos@facturascripts.com>
  * @author Cristo M. Estévez Hernández  <cristom.estevez@gmail.com>
@@ -63,12 +63,12 @@ class EditSecuenciaDocumento extends EditController
         // añadimos las vistas de los documentos
         $this->createViewsDocuments('ListFacturaCliente', 'FacturaCliente', 'customer-invoices');
         $this->createViewsDocuments('ListFacturaProveedor', 'FacturaProveedor', 'supplier-invoices');
-        $this->createViewsDocuments('ListAlbaranCliente', 'AlbaranCliente', 'delivery-notes');
-        $this->createViewsDocuments('ListAlbaranProveedor', 'AlbaranProveedor', 'delivery-notes');
-        $this->createViewsDocuments('ListPedidoCliente', 'PedidoCliente', 'orders');
-        $this->createViewsDocuments('ListPedidoProveedor', 'PedidoProveedor', 'orders');
-        $this->createViewsDocuments('ListPresupuestoCliente', 'PresupuestoCliente', 'estimations');
-        $this->createViewsDocuments('ListPresupuestoProveedor', 'PresupuestoProveedor', 'estimations');
+        $this->createViewsDocuments('ListAlbaranCliente', 'AlbaranCliente', 'customer-delivery-notes');
+        $this->createViewsDocuments('ListAlbaranProveedor', 'AlbaranProveedor', 'supplier-delivery-notes');
+        $this->createViewsDocuments('ListPedidoCliente', 'PedidoCliente', 'customer-orders');
+        $this->createViewsDocuments('ListPedidoProveedor', 'PedidoProveedor', 'supplier-orders');
+        $this->createViewsDocuments('ListPresupuestoCliente', 'PresupuestoCliente', 'customer-quotes');
+        $this->createViewsDocuments('ListPresupuestoProveedor', 'PresupuestoProveedor', 'supplier-quotes');
     }
 
     protected function createViewsDocuments(string $viewName, string $model, string $title): void
@@ -101,13 +101,13 @@ class EditSecuenciaDocumento extends EditController
                     Where::eq('idempresa', $this->mainTabModelValue('idempresa'))
                 ];
                 // si tiene ejercicio, solo mostramos los resultados de ese ejercicio
-                if ($this->tab($mvn)->model->codejercicio) {
-                    $where[] = Where::eq('codejercicio', $this->tab($mvn)->model->codejercicio);
+                if ($this->views[$mvn]->model->codejercicio) {
+                    $where[] = Where::eq('codejercicio', $this->views[$mvn]->model->codejercicio);
                     $view->loadData('', $where);
                     break;
                 }
                 // no tiene ejercicio, mostramos los resultados otros ejercicios que no están en otras secuencias
-                $other = implode(',', BusinessDocumentCode::getOtherExercises($this->tab($mvn)->model));
+                $other = implode(',', BusinessDocumentCode::getOtherExercises($this->views[$mvn]->model));
                 if (!empty($other)) {
                     $where[] = Where::notIn('codejercicio', $other);
                 }
@@ -116,11 +116,6 @@ class EditSecuenciaDocumento extends EditController
 
             case $mvn:
                 parent::loadData($viewName, $view);
-
-                // en facturas no ofrecemos la opción de mantener la fecha al rellenar huecos
-                if (false === $view->model->canKeepDate()) {
-                    $this->mainTab()->disableColumn('keep-date');
-                }
 
                 // desactivamos todas las pestañas de documentos
                 $this->setSettings('ListAlbaranCliente', 'active', false);

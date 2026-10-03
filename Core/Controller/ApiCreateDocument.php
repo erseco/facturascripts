@@ -95,7 +95,7 @@ class ApiCreateDocument extends ApiController
 
         // asignamos la fecha
         $fecha = $this->request->input('fecha');
-        $hora = $this->request->input('hora') ?: $doc->hora;
+        $hora = $this->request->input('hora', $doc->hora);
         if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
@@ -112,11 +112,8 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya las asigna setDate)
+        // asignamos el resto de campos del modelo
         foreach ($doc->getModelFields() as $key => $field) {
-            if (in_array($key, ['fecha', 'hora'], true)) {
-                continue;
-            }
             if ($this->request->request->has($key)) {
                 $doc->{$key} = $this->request->input($key);
             }
@@ -210,7 +207,7 @@ class ApiCreateDocument extends ApiController
 
         // asignamos la fecha
         $fecha = $this->request->input('fecha');
-        $hora = $this->request->input('hora') ?: $doc->hora;
+        $hora = $this->request->input('hora', $doc->hora);
         if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
@@ -227,11 +224,8 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya las asigna setDate)
+        // asignamos el resto de campos del modelo
         foreach ($doc->getModelFields() as $key => $field) {
-            if (in_array($key, ['fecha', 'hora'], true)) {
-                continue;
-            }
             if ($this->request->request->has($key)) {
                 $doc->{$key} = $this->request->input($key);
             }
@@ -366,8 +360,9 @@ class ApiCreateDocument extends ApiController
             return false;
         }
 
-        $lineas = $this->decodeLines($this->request->input('lineas'));
-        if (null === $lineas) {
+        $lineData = $this->request->input('lineas');
+        $lineas = json_decode($lineData, true);
+        if (!is_array($lineas)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([

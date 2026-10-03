@@ -33,19 +33,19 @@ class PageFilter extends ModelClass
 {
     use ModelTrait;
 
-    /** @var string Descripción legible de la configuración de filtros. */
+    /** Descripción legible de la configuración de filtros. @var string */
     public $description;
 
-    /** @var array Definición de los valores de los filtros de la vista. */
+    /** Definición de los valores de los filtros de la vista. @var array */
     public $filters;
 
-    /** @var int Identificador único de la configuración de filtros. */
+    /** Identificador único de la configuración de filtros. @var int */
     public $id;
 
-    /** @var string Nombre de la página o controlador al que pertenecen los filtros. */
+    /** Nombre de la página o controlador al que pertenecen los filtros. @var string */
     public $name;
 
-    /** @var string Nombre del usuario propietario de la configuración. */
+    /** Nombre del usuario propietario de la configuración. @var string */
     public $nick;
 
     public function clear(): void

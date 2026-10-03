@@ -21,7 +21,6 @@ namespace FacturaScripts\Core\Controller;
 
 use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\ControllerPermissions;
-use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Response;
 use FacturaScripts\Core\Tools;
@@ -40,7 +39,7 @@ use FacturaScripts\Dinamic\Model\SecuenciaDocumento;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
- * Controlador del asistente de configuración inicial de la aplicación.
+ * Description of Wizard
  *
  * @author Carlos García Gómez <carlos@facturascripts.com>
  */
@@ -99,11 +98,6 @@ class Wizard extends Controller
      */
     public function privateCore(&$response, $user, $permissions)
     {
-        // solo los administradores pueden usar esta página
-        if (false === $user->admin) {
-            throw new KernelException('AccessDenied', Tools::trans('access-denied'));
-        }
-
         parent::privateCore($response, $user, $permissions);
 
         $action = $this->request->inputOrQuery('action', '');
@@ -327,18 +321,13 @@ class Wizard extends Controller
         $this->saveInvoiceStartNumber();
         $this->saveBankAccount();
 
-        // change template and redirect (con un token nuevo para el paso 3)
+        // change template and redirect
         $this->setTemplate('Wizard-3');
-        $token = $this->multiRequestProtection->newToken();
-        $this->redirect($this->url() . '?action=step3&multireqtoken=' . urlencode($token), 2);
+        $this->redirect($this->url() . '?action=step3', 2);
     }
 
     protected function saveStep3(): void
     {
-        if (false === $this->validateFormToken()) {
-            return;
-        }
-
         // load all models
         $modelNames = [];
         $modelsFolder = Tools::folder('Dinamic', 'Model');

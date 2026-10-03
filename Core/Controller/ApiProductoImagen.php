@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2026-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2026 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -26,9 +26,6 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Model\ProductoImagen;
 
-/**
- * Controlador de la API para gestionar las imágenes de los productos.
- */
 class ApiProductoImagen extends ApiController
 {
     /** @var ProductoImagen */
@@ -242,13 +239,6 @@ class ApiProductoImagen extends ApiController
         $offset = $this->request->query->getInt('offset', 0);
         $operation = $this->request->query->getArray('operation');
         $order = $this->request->query->getArray('sort');
-
-        // el conector de cada filtro se concatena en el SQL: solo aceptamos AND u OR
-        $badOperations = array_keys(array_filter($operation, fn($value) => false === Where::isValidOperation($value)));
-        if (!empty($badOperations)) {
-            $this->setError('api: operation not allowed: ' . implode(', ', $badOperations));
-            return;
-        }
 
         // obtenemos los registros
         $where = $this->getWhereValues($filter, $operation);

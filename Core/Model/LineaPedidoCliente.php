@@ -33,7 +33,7 @@ class LineaPedidoCliente extends SalesDocumentLine
 {
     use ModelTrait;
 
-    /** @var int Identificador del pedido de cliente al que pertenece la línea. */
+    /** Identificador del pedido de cliente al que pertenece la línea. @var int */
     public $idpedido;
 
     public function documentColumn(): string

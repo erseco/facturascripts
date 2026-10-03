@@ -25,7 +25,7 @@ use FacturaScripts\Core\Tools;
 use ZipArchive;
 
 /**
- * Controlador para listar los elementos del modelo AttachedFile
+ * Controller to list the items in the AttachedFile model
  *
  * @author Carlos García Gómez      <carlos@facturascripts.com>
  * @author Francesc Pineda Segarra  <francesc.pineda.segarra@gmail.com>
@@ -107,12 +107,6 @@ class ListAttachedFile extends ListController
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($filepath));
-
-        // descartamos los buffers de salida para no cargar el archivo entero en memoria
-        while (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-
         readfile($filepath);
 
         // borramos el zip

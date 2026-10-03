@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2026  Carlos Garcia Gomez     <carlos@facturascripts.com>
+ * Copyright (C) 2017-2025  Carlos Garcia Gomez     <carlos@facturascripts.com>
  * Copyright (C) 2017       Francesc Pineda Segarra <francesc.pineda.segarra@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -49,40 +49,37 @@ class EstadoDocumento extends ModelClass
 {
     use ModelTrait;
 
-    /** @var bool Indica si el estado está disponible para su uso. */
+    /** Indica si el estado está disponible para su uso. @var bool */
     public $activo;
 
-    /** @var int Define cómo modifica el documento el stock de los productos. */
+    /** Define cómo modifica el documento el stock de los productos. @var int */
     public $actualizastock;
 
-    /** @var bool Indica si el estado queda protegido frente a modificaciones y borrado. */
+    /** Indica si el estado queda protegido frente a modificaciones y borrado. @var bool */
     public $bloquear;
 
-    /** @var string Color utilizado para representar el estado. */
+    /** Color utilizado para representar el estado. @var string */
     public $color;
 
-    /** @var bool Indica si los documentos con este estado se pueden editar. */
+    /** Indica si los documentos con este estado se pueden editar. @var bool */
     public $editable;
 
-    /** @var string Tipo de documento que se genera al aplicar este estado. */
+    /** Tipo de documento que se genera al aplicar este estado. @var string */
     public $generadoc;
 
-    /** @var string Icono utilizado para representar el estado. */
+    /** Icono utilizado para representar el estado. @var string */
     public $icon;
 
-    /** @var int Identificador único del estado de documento. */
+    /** Identificador único del estado de documento. @var int */
     public $idestado;
 
-    /** @var string Nombre del estado de documento. */
+    /** Nombre del estado de documento. @var string */
     public $nombre;
 
-    /** @var int Posición del estado al mostrar los estados de su tipo de documento. */
-    public $orden;
-
-    /** @var bool Indica si es el estado predeterminado para su tipo de documento. */
+    /** Indica si es el estado predeterminado para su tipo de documento. @var bool */
     public $predeterminado;
 
-    /** @var string Tipo de documento al que pertenece el estado. */
+    /** Tipo de documento al que pertenece el estado. @var string */
     public $tipodoc;
 
     public function clear(): void
@@ -92,7 +89,6 @@ class EstadoDocumento extends ModelClass
         $this->actualizastock = 0;
         $this->bloquear = false;
         $this->editable = true;
-        $this->orden = 100;
         $this->predeterminado = false;
     }
 

@@ -23,7 +23,6 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\Widget\VisualItem;
 use FacturaScripts\Core\Model\Base\ModelClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\Widget\ColumnItem;
 use FacturaScripts\Dinamic\Lib\Widget\GroupItem;
 use FacturaScripts\Dinamic\Lib\Widget\VisualItemLoadEngine;
@@ -142,9 +141,9 @@ abstract class BaseView
     abstract public function export(&$exportManager, $codes): bool;
 
     /**
-     * Loads view data. Si $limit es negativo se usa el límite de los ajustes; 0 significa sin límite.
+     * Loads view data.
      */
-    abstract public function loadData($code = '', $where = [], $order = [], $offset = 0, $limit = -1);
+    abstract public function loadData($code = '', $where = [], $order = [], $offset = 0, $limit = FS_ITEM_LIMIT);
 
     /**
      * Process form data.
@@ -182,10 +181,8 @@ abstract class BaseView
             'checkBoxes' => true,
             'clickable' => true,
             'customized' => false,
-            'group' => '',
             'itemLimit' => Tools::settings('default', 'item_limit', 50),
             'megasearch' => false,
-            'navigation' => true,
             'saveFilters' => false,
         ];
         $this->template = static::DEFAULT_TEMPLATE;
@@ -366,18 +363,15 @@ abstract class BaseView
             VisualItem::setLevel($user->level);
         }
 
-        // cargamos la estructura desde el XML
-        $viewName = explode('-', $this->name)[0];
-        VisualItemLoadEngine::installXML($viewName, $this->pageOption);
-
-        // si hay personalización guardada, superponemos sus cambios sobre el XML
-        $custom = $this->getCustomPageOption($viewName, $user);
-        if (false === is_null($custom)) {
+        $orderBy = ['nick' => 'ASC'];
+        $where = $this->getPageWhere($user);
+        if ($this->pageOption->loadWhere($where, $orderBy)) {
             $this->settings['customized'] = true;
-            VisualItemLoadEngine::mergeCustomization($this->pageOption, $custom);
+        } else {
+            $viewName = explode('-', $this->name)[0];
+            VisualItemLoadEngine::installXML($viewName, $this->pageOption);
         }
 
-        // creamos la estructura visual
         VisualItemLoadEngine::loadArray($this->columns, $this->modals, $this->rows, $this->pageOption);
     }
 
@@ -457,33 +451,6 @@ abstract class BaseView
         }
 
         return null;
-    }
-
-    /**
-     * Devuelve la personalización guardada de la vista: la del usuario si existe o, en su defecto, la general.
-     *
-     * @param string $viewName
-     * @param User|false $user
-     *
-     * @return PageOption|null
-     */
-    protected function getCustomPageOption(string $viewName, $user = false): ?PageOption
-    {
-        // no ordenamos por nick: MySQL y MariaDB colocan los NULL primero y PostgreSQL al final
-        if (false === is_bool($user)) {
-            $custom = PageOption::findWhere([
-                Where::eq('name', $viewName),
-                Where::eq('nick', $user->nick),
-            ]);
-            if (null !== $custom) {
-                return $custom;
-            }
-        }
-
-        return PageOption::findWhere([
-            Where::eq('name', $viewName),
-            Where::isNull('nick'),
-        ]);
     }
 
     /**

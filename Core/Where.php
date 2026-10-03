@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2023-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2023-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -57,25 +57,25 @@ final class Where
     /** Separador para indicar varios campos en `$fields`; produce condiciones unidas por OR. */
     const FIELD_SEPARATOR = '|';
 
-    /** @var DataBase Conexión compartida perezosa, instanciada en el primer uso. */
+    /** Conexión compartida perezosa, instanciada en el primer uso. @var DataBase */
     private static $db;
 
-    /** @var string Nombre del campo (o varios separados por FIELD_SEPARATOR). */
+    /** Nombre del campo (o varios separados por FIELD_SEPARATOR). @var string */
     public $fields;
 
-    /** @var string Operador SQL: `=`, `!=`, `<`, `>`, `LIKE`, `IN`, `BETWEEN`, `XLIKE`, ... o `(` para grupos. */
+    /** Operador SQL: `=`, `!=`, `<`, `>`, `LIKE`, `IN`, `BETWEEN`, `XLIKE`, ... o `(` para grupos. @var string */
     public $operator;
 
-    /** @var string Conector con la cláusula previa al concatenar: `AND` u `OR`. */
+    /** Conector con la cláusula previa al concatenar: `AND` u `OR`. @var string */
     public $operation;
 
-    /** @var Where[] Cláusulas hijas cuando el operador es `(` (grupo anidado). */
+    /** Cláusulas hijas cuando el operador es `(` (grupo anidado). @var Where[] */
     public $subWhere;
 
-    /** @var bool Si es true, los valores con prefijo `field:` se interpretan como nombre de columna. */
+    /** Si es true, los valores con prefijo `field:` se interpretan como nombre de columna. @var bool */
     public $useField;
 
-    /** @var mixed Valor a comparar; puede ser escalar, array (IN/BETWEEN) o null (se traduce a IS NULL). */
+    /** Valor a comparar; puede ser escalar, array (IN/BETWEEN) o null (se traduce a IS NULL). @var mixed */
     public $value;
 
     /**
@@ -87,7 +87,7 @@ final class Where
         $this->fields = $fields;
         $this->value = $value;
         $this->operator = $operator;
-        $this->operation = self::checkOperation($operation);
+        $this->operation = $operation;
         $this->useField = $useField;
     }
 
@@ -159,15 +159,6 @@ final class Where
     }
 
     /**
-     * Indica si el valor es un conector válido entre cláusulas: AND u OR, sin distinguir mayúsculas.
-     * Útil para validar el conector cuando viene de la petición, antes de crear el Where.
-     */
-    public static function isValidOperation($operation): bool
-    {
-        return is_string($operation) && in_array(strtoupper(trim($operation)), ['AND', 'OR'], true);
-    }
-
-    /**
      * Crea `LOWER(campo) LIKE LOWER('%value%')`.
      *
      * Si `$value` ya contiene comodines `%`, se respetan tal cual; en caso contrario, se
@@ -207,7 +198,7 @@ final class Where
             }
 
             if (!empty($sql)) {
-                $sql .= ' ' . self::checkOperation($item->operation) . ' ';
+                $sql .= ' ' . $item->operation . ' ';
             }
 
             if ($item->operator === '(') {
@@ -240,7 +231,7 @@ final class Where
                 $dbWhere = new self($item->fields, $item->value, $item->operator, $item->operation, $item->useField ?? false);
 
                 if (!empty($sql)) {
-                    $sql .= ' ' . self::checkOperation($item->operation) . ' ';
+                    $sql .= ' ' . $item->operation . ' ';
                 }
 
                 // si el siguiente elemento es un OR, lo agrupamos
@@ -265,7 +256,7 @@ final class Where
             }
 
             if (!empty($sql)) {
-                $sql .= ' ' . self::checkOperation($item->operation) . ' ';
+                $sql .= ' ' . $item->operation . ' ';
             }
 
             if ($item->operator === '(') {
@@ -515,21 +506,6 @@ final class Where
     public static function xlike(string $fields, string $value): self
     {
         return new self($fields, $value, 'XLIKE');
-    }
-
-    /**
-     * Devuelve el conector normalizado (AND u OR). Cualquier otro valor se rechaza con una excepción,
-     * porque se concatena directamente en el SQL.
-     *
-     * @throws Exception
-     */
-    private static function checkOperation($operation): string
-    {
-        if (false === self::isValidOperation($operation)) {
-            throw new Exception('Invalid where operation: ' . (is_string($operation) ? $operation : gettype($operation)));
-        }
-
-        return strtoupper(trim($operation));
     }
 
     private static function db(): DataBase

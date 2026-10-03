@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2023-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2023-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -20,26 +20,12 @@
 namespace FacturaScripts\Core;
 
 use FacturaScripts\Core\Base\MiniLog;
-use Throwable;
 
 /**
  * La clase que se encarga de gestionar los errores fatales.
  */
 final class CrashReport
 {
-    /**
-     * Indica si se pueden mostrar los botones de desactivar plugins y reconstruir, que incluyen el token de Deploy.
-     * Solo se muestran a un administrador con sesión válida o a quien accede desde la propia máquina.
-     */
-    public static function canShowDeployButtons(): bool
-    {
-        if (Tools::config('disable_deploy_actions', false)) {
-            return false;
-        }
-
-        return self::isLocalRequest() || self::hasAdminSession();
-    }
-
     public static function getErrorFragment(string $file, int $line, int $linesToShow = 10, bool $html = false): string
     {
         if (!is_readable($file)) {
@@ -78,7 +64,7 @@ final class CrashReport
         return implode("\n", $result);
     }
 
-    public static function getErrorInfo($code, string $message, string $file, int $line): array
+    public static function getErrorInfo(int $code, string $message, string $file, int $line): array
     {
         // calculamos un hash para el error, de forma que en la web podamos dar respuesta automáticamente
         $errorUrl = parse_url($_SERVER["REQUEST_URI"] ?? '', PHP_URL_PATH);
@@ -87,16 +73,6 @@ final class CrashReport
         $errorHash = md5($code . $errorFile . $line . $errorMessage);
         $reportUrl = 'https://facturascripts.com/errores/' . $errorHash;
         $reportQr = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($reportUrl);
-
-        // añadimos el id de telemetría y la url de la instalación, si la base de datos está disponible
-        $telemetryId = 0;
-        $siteUrl = '';
-        try {
-            $telemetry = new Telemetry();
-            $telemetryId = (int)$telemetry->id();
-            $siteUrl = $telemetry->url();
-        } catch (Throwable $th) {
-        }
 
         return [
             'code' => $code,
@@ -112,8 +88,6 @@ final class CrashReport
             'php_version' => phpversion(),
             'os' => PHP_OS,
             'plugin_list' => implode(',', Plugins::enabled()),
-            'idinstall' => $telemetryId,
-            'site_url' => $siteUrl,
         ];
     }
 
@@ -126,7 +100,8 @@ final class CrashReport
 
     public static function newToken(): string
     {
-        return AppKey::sign('crash-report', date('Y-m-d H'));
+        $seed = Tools::config('db_name') . Tools::config('db_user') . Tools::config('db_password');
+        return md5($seed . date('Y-m-d H'));
     }
 
     public static function save(array $info): void
@@ -180,19 +155,32 @@ final class CrashReport
 
     public static function validateToken(string $token): bool
     {
-        // aceptamos también el token de la hora anterior, por si ha cambiado la hora desde que se mostró
-        foreach (['now', '-1 hour'] as $time) {
-            if (AppKey::verify('crash-report', date('Y-m-d H', strtotime($time)), $token)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $token === self::newToken();
     }
 
     private static function canShowDebugInfo(): bool
     {
         return Tools::config('debug', false);
+    }
+
+    private static function canShowDeployButtons(): bool
+    {
+        if (Tools::config('disable_deploy_actions', false)) {
+            return false;
+        }
+
+        // comprobamos si existen las cookies de login
+        if (isset($_COOKIE['fsNick']) && isset($_COOKIE['fsLogkey'])) {
+            return true;
+        }
+
+        // si el dominio es localhost, también mostramos los botones
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if (strpos($host, 'localhost') !== false) {
+            return true;
+        }
+
+        return false;
     }
 
     private static function formatErrorMessage(string $message): string
@@ -313,48 +301,6 @@ final class CrashReport
         return $html;
     }
 
-    /**
-     * Comprueba las cookies de login contra la base de datos, sin usar modelos de Dinamic,
-     * porque esta página se muestra precisamente cuando Dinamic o algún plugin fallan.
-     */
-    private static function hasAdminSession(): bool
-    {
-        $nick = $_COOKIE['fsNick'] ?? '';
-        $logkey = $_COOKIE['fsLogkey'] ?? '';
-        if (false === is_string($nick) || false === is_string($logkey) || $nick === '' || $logkey === '') {
-            return false;
-        }
-
-        try {
-            $user = DbQuery::table('users')->whereEq('nick', $nick)->first();
-        } catch (Throwable $th) {
-            return false;
-        }
-
-        if (empty($user) || false === is_string($user['logkey']) || false === hash_equals($user['logkey'], $logkey)) {
-            return false;
-        }
-
-        // en PostgreSQL los booleanos llegan como 't' o 'f'
-        $isTrue = fn($value) => in_array(strtolower((string)$value), ['true', 't', '1'], true);
-        return $isTrue($user['admin']) && $isTrue($user['enabled']);
-    }
-
-    /**
-     * Indica si la petición llega desde la propia máquina y no a través de un proxy. No se usa la cabecera Host
-     * ni X-Forwarded-For, porque las controla el cliente.
-     */
-    private static function isLocalRequest(): bool
-    {
-        foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_FORWARDED', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP'] as $header) {
-            if (!empty($_SERVER[$header])) {
-                return false;
-            }
-        }
-
-        return in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
-    }
-
     private static function showCliError(array $info, array $error): void
     {
         // Separador para mejor legibilidad
@@ -462,8 +408,7 @@ final class CrashReport
                 . '<b>PHP</b>: ' . $info['php_version'] . ', <b>OS</b>: ' . $info['os'] . '</p>';
         }
 
-        echo '<p class="text-muted mb-0 mt-3">' . self::trans('to-report-info') . '</p>'
-            . '</div>'
+        echo '</div>'
             . '<div class="card-footer p-2">'
             . '<div class="row">'
             . '<div class="col">'
@@ -478,9 +423,7 @@ final class CrashReport
             . '<input type="hidden" name="error_plugin_list" value="' . Tools::noHtml($info['plugin_list']) . '">'
             . '<input type="hidden" name="error_php_version" value="' . Tools::noHtml($info['php_version']) . '">'
             . '<input type="hidden" name="error_os" value="' . Tools::noHtml($info['os']) . '">'
-            . '<input type="hidden" name="error_idinstall" value="' . Tools::noHtml($info['idinstall']) . '">'
-            . '<input type="hidden" name="error_site_url" value="' . Tools::noHtml($info['site_url']) . '">'
-            . '<button type="submit" class="btn btn-secondary">📤 ' . self::trans('to-report') . '</button>'
+            . '<button type="submit" class="btn btn-secondary">' . self::trans('to-report') . '</button>'
             . '</form>'
             . '</div>';
 
@@ -528,8 +471,7 @@ final class CrashReport
     {
         $translations = [
             'es_ES' => [
-                'to-report' => 'Informar y ver solución',
-                'to-report-info' => 'Envía el informe para ver los detalles de este error y comprobar si ya existe una solución.',
+                'to-report' => 'Enviar informe',
                 'disable-plugins' => 'Desactivar plugins',
                 'rebuild' => 'Reconstruir',
                 'recent-log-messages' => 'Últimos mensajes del log',
@@ -538,20 +480,9 @@ final class CrashReport
                 'channel' => 'Canal',
                 'code-fragment' => 'Fragmento de código',
             ],
-            'en_EN' => [
-                'to-report' => 'Report and see solution',
-                'to-report-info' => 'Send the report to see the details of this error and check if a solution already exists.',
-                'disable-plugins' => 'Disable plugins',
-                'rebuild' => 'Rebuild',
-                'recent-log-messages' => 'Recent log messages',
-                'level' => 'Level',
-                'message' => 'Message',
-                'channel' => 'Channel',
-                'code-fragment' => 'Code fragment',
-            ],
         ];
 
         $lang = Tools::config('lang', 'es_ES');
-        return $translations[$lang][$code] ?? $translations['en_EN'][$code] ?? $code;
+        return $translations[$lang][$code] ?? $code;
     }
 }

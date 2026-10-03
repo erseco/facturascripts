@@ -46,43 +46,43 @@ class Asiento extends ModelClass
     const OPERATION_REGULARIZATION = 'R';
     const RENUMBER_LIMIT = 1000;
 
-    /** @var int Canal contable utilizado con fines estadísticos. */
+    /** Canal contable utilizado con fines estadísticos. @var int */
     public $canal;
 
-    /** @var string Concepto del asiento contable. */
+    /** Concepto del asiento contable. @var string */
     public $concepto;
 
-    /** @var float Importe total del debe del asiento. */
+    /** Importe total del debe del asiento. @var float */
     public $debe = 0.0;
 
-    /** @var string Documento asociado al asiento contable. */
+    /** Documento asociado al asiento contable. @var string */
     public $documento;
 
-    /** @var bool Indica si el asiento contable se puede editar. */
+    /** Indica si el asiento contable se puede editar. @var bool */
     public $editable;
 
-    /** @var string Fecha del asiento contable. */
+    /** Fecha del asiento contable. @var string */
     public $fecha;
 
-    /** @var float Importe total del haber del asiento. */
+    /** Importe total del haber del asiento. @var float */
     public $haber = 0.0;
 
-    /** @var int Identificador único del asiento contable. */
+    /** Identificador único del asiento contable. @var int */
     public $idasiento;
 
-    /** @var int Identificador del diario contable asociado. */
+    /** Identificador del diario contable asociado. @var int */
     public $iddiario;
 
-    /** @var int Identificador de la empresa asociada. */
+    /** Identificador de la empresa asociada. @var int */
     public $idempresa;
 
-    /** @var float|int Importe total del asiento contable. */
+    /** Importe total del asiento contable. @var float|int */
     public $importe;
 
-    /** @var string Número del asiento contable, modificable durante la renumeración. */
+    /** Número del asiento contable, modificable durante la renumeración. @var string */
     public $numero;
 
-    /** @var string Tipo de operación especial del asiento: apertura, regularización o cierre. */
+    /** Tipo de operación especial del asiento: apertura, regularización o cierre. @var string */
     public $operacion;
 
     /**

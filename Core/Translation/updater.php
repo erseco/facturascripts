@@ -34,51 +34,26 @@ foreach (scandir(__DIR__, SCANDIR_SORT_ASCENDING) as $filename) {
 }
 
 // download json from facturascripts.com
-$hasErrors = false;
 foreach ($files as $filename) {
     $url = "https://facturascripts.com/EditLanguage?action=json&idproject=1&code=" . substr($filename, 0, -5);
-    error_clear_last();
-    $newContent = @file_get_contents($url);
-    if (false === $newContent) {
-        $error = error_get_last();
-        echo "Error downloading " . $filename . ": " . ($error['message'] ?? 'unknown error') . "\n";
-        $hasErrors = true;
-        continue;
-    }
+    $newContent = file_get_contents($url);
+    if (empty($newContent)) {
+        if (file_exists($filename)) {
+            unlink($filename);
+            echo "Remove " . $filename . "\n";
+            continue;
+        }
 
-    $json = json_decode($newContent, true);
-    if (false === is_array($json) || empty($json) || JSON_ERROR_NONE !== json_last_error()) {
-        echo "Error downloading " . $filename . ": invalid or empty JSON response\n";
-        $hasErrors = true;
+        echo "Empty " . $filename . "\n";
         continue;
     }
 
     $oldContent = file_exists($filename) ? file_get_contents($filename) : '';
-    if ($newContent === $oldContent) {
-        echo "Skip " . $filename . "\n";
+    if (strlen($newContent) > 10 && $newContent !== $oldContent) {
+        echo "Download " . $filename . "\n";
+        file_put_contents($filename, $newContent);
         continue;
     }
 
-    $permissions = file_exists($filename) ? (fileperms($filename) & 0777) : 0664;
-    $tempFilename = tempnam(__DIR__, 'translation-');
-    if (
-        false === $tempFilename
-        || strlen($newContent) !== file_put_contents($tempFilename, $newContent, LOCK_EX)
-        || false === chmod($tempFilename, $permissions)
-        || false === rename($tempFilename, $filename)
-    ) {
-        if ($tempFilename && file_exists($tempFilename)) {
-            unlink($tempFilename);
-        }
-
-        echo "Error saving " . $filename . "\n";
-        $hasErrors = true;
-        continue;
-    }
-
-    echo "Download " . $filename . "\n";
-}
-
-if ($hasErrors) {
-    exit(1);
+    echo "Skip " . $filename . "\n";
 }

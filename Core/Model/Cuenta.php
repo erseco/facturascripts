@@ -39,34 +39,34 @@ class Cuenta extends ModelClass
     use ModelTrait;
     use ExerciseRelationTrait;
 
-    /** @var string Código identificativo de la cuenta contable. */
+    /** Código identificativo de la cuenta contable. @var string */
     public $codcuenta;
 
-    /** @var string Código de la cuenta especial asociada. */
+    /** Código de la cuenta especial asociada. @var string */
     public $codcuentaesp;
 
-    /** @var float Importe acumulado en el debe de la cuenta. */
+    /** Importe acumulado en el debe de la cuenta. @var float */
     public $debe;
 
-    /** @var string Descripción de la cuenta contable. */
+    /** Descripción de la cuenta contable. @var string */
     public $descripcion;
 
-    /** @var bool Indica si se omiten las comprobaciones adicionales del modelo. */
+    /** Indica si se omiten las comprobaciones adicionales del modelo. @var bool */
     private $disable_additional_test = false;
 
-    /** @var float Importe acumulado en el haber de la cuenta. */
+    /** Importe acumulado en el haber de la cuenta. @var float */
     public $haber;
 
-    /** @var int Identificador único de la cuenta contable. */
+    /** Identificador único de la cuenta contable. @var int */
     public $idcuenta;
 
-    /** @var string Código de la cuenta contable superior. */
+    /** Código de la cuenta contable superior. @var string */
     public $parent_codcuenta;
 
-    /** @var int Identificador de la cuenta contable superior. */
+    /** Identificador de la cuenta contable superior. @var int */
     public $parent_idcuenta;
 
-    /** @var float Saldo acumulado de la cuenta contable. */
+    /** Saldo acumulado de la cuenta contable. @var float */
     public $saldo;
 
     public function clear(): void
@@ -249,14 +249,7 @@ class Cuenta extends ModelClass
         $this->descripcion = Tools::noHtml($this->descripcion);
 
         if (empty($this->codcuenta) || false === is_numeric($this->codcuenta)) {
-            Tools::log()->warning('invalid-number', [
-                '%number%' => $this->codcuenta === null || $this->codcuenta === '' ? Tools::trans('empty') : $this->codcuenta,
-                'codejercicio' => $this->codejercicio,
-                'field' => 'codcuenta',
-                'model-class' => $this->modelClassName(),
-                'model-code' => $this->id(),
-                'value' => $this->codcuenta,
-            ]);
+            Tools::log()->warning('invalid-number', ['%number%' => $this->codcuenta]);
             return false;
         }
 

@@ -31,7 +31,7 @@ use FacturaScripts\Dinamic\Model\Partida;
 use FacturaScripts\Dinamic\Model\Subcuenta;
 
 /**
- * Controlador para editar un único elemento del modelo Subcuenta
+ * Controller to edit a single item from the SubCuenta model
  *
  * @author Carlos García Gómez           <carlos@facturascripts.com>
  * @author Jose Antonio Cuello Principal <yopli2000@gmail.com>
@@ -248,31 +248,13 @@ class EditSubcuenta extends EditController
      */
     private function dotAccountingAction(bool $value): bool
     {
-        // comprobamos el permiso de modificación y el token del formulario
-        if (false === $this->permissions->allowUpdate) {
-            Tools::log()->warning('not-allowed-modify');
-            return true;
-        } elseif (false === $this->validateFormToken()) {
-            return true;
-        }
-
         $ids = $this->request->request->getArray('codes');
         if (empty($ids)) {
             Tools::log()->warning('no-selected-item');
             return true;
         }
 
-        // solo modificamos las partidas de la subcuenta que se está editando
-        $subaccount = new Subcuenta();
-        if (false === $subaccount->load($this->request->queryOrInput('code'))) {
-            Tools::log()->warning('record-not-found');
-            return true;
-        }
-
-        $where = [
-            Where::in('idpartida', $ids),
-            Where::eq('idsubcuenta', $subaccount->idsubcuenta)
-        ];
+        $where = [Where::in('idpartida', $ids)];
         foreach (Partida::all($where) as $row) {
             $row->setDottedStatus($value);
         }
@@ -283,7 +265,7 @@ class EditSubcuenta extends EditController
 
     private function setLedgerReportExportOptions(string $viewName): void
     {
-        $columnFormat = $this->tab($viewName)->columnModalForName('format');
+        $columnFormat = $this->views[$viewName]->columnModalForName('format');
         if ($columnFormat && $columnFormat->widget->getType() === 'select') {
             $values = [];
             foreach ($this->exportManager->options() as $key => $options) {
@@ -299,7 +281,7 @@ class EditSubcuenta extends EditController
         $exercise = new Ejercicio();
         $exercise->load($codeExercise);
 
-        $model = $this->tab($viewName)->model;
+        $model = $this->views[$viewName]->model;
         $model->dateFrom = $exercise->fechainicio;
         $model->dateTo = $exercise->fechafin;
     }

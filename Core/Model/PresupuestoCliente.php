@@ -35,10 +35,10 @@ class PresupuestoCliente extends SalesDocument
 {
     use ModelTrait;
 
-    /** @var string Fecha hasta la que se mantiene la validez del presupuesto. */
+    /** Fecha hasta la que se mantiene la validez del presupuesto. @var string */
     public $finoferta;
 
-    /** @var integer Identificador único del presupuesto de cliente. */
+    /** Identificador único del presupuesto de cliente. @var integer */
     public $idpresupuesto;
 
     public function clear(): void

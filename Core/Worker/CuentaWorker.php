@@ -25,8 +25,6 @@ use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\Cuenta;
 
 /**
- * Recalcula el debe, el haber y el saldo de una cuenta a partir de sus cuentas hijas y subcuentas.
- *
  * @author Daniel Fernández Giménez <contacto@danielfg.es>
  */
 class CuentaWorker extends WorkerClass
