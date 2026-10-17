@@ -356,7 +356,7 @@ final class Kernel
      */
     public static function version(): float
     {
-        return 2026.71;
+        return 2026.7;
     }
 
     /**

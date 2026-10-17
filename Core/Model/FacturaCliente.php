@@ -43,7 +43,6 @@ class FacturaCliente extends SalesDocument
         parent::__construct($data);
 
         self::$dont_copy_fields[] = 'fechadevengo';
-        self::$dont_copy_fields[] = 'motivorect';
     }
 
     public function clear(): void
@@ -140,11 +139,6 @@ class FacturaCliente extends SalesDocument
     public static function tableName(): string
     {
         return 'facturascli';
-    }
-
-    public function test(): bool
-    {
-        return $this->testRefundReason() && parent::test();
     }
 
     protected function saveInsert(): bool

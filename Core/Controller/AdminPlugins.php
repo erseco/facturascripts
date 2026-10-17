@@ -23,7 +23,6 @@ use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\ControllerPermissions;
 use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Internal\Forja;
-use FacturaScripts\Core\Internal\PhpExtensions;
 use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Response;
@@ -81,9 +80,6 @@ class AdminPlugins extends Controller
         }
 
         parent::privateCore($response, $user, $permissions);
-
-        // avisamos de las extensiones de PHP que faltan
-        PhpExtensions::warnMissing();
 
         $action = $this->request->inputOrQuery('action', '');
         switch ($action) {
@@ -188,11 +184,6 @@ class AdminPlugins extends Controller
 
     private function extractPluginsZipFiles(): void
     {
-        // sin la extensión zip no se pueden descomprimir los plugins
-        if (PhpExtensions::missing(['zip'])) {
-            return;
-        }
-
         $ok = false;
         foreach (Tools::folderScan(Plugins::folder()) as $zipFileName) {
             // si el archivo no es un zip, lo ignoramos
@@ -269,9 +260,6 @@ class AdminPlugins extends Controller
             Tools::log()->warning('not-allowed-update');
             return;
         } elseif (false === $this->validateFormToken()) {
-            return;
-        } elseif (PhpExtensions::missing(['fileinfo', 'zip'])) {
-            // sin fileinfo no podemos comprobar el tipo del archivo y sin zip no podemos descomprimirlo
             return;
         }
 

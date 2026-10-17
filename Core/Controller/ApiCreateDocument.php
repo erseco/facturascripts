@@ -93,12 +93,10 @@ class ApiCreateDocument extends ApiController
             return;
         }
 
-        // asignamos la fecha y la hora; sin fecha, la hora se asigna sola
+        // asignamos la fecha
         $fecha = $this->request->input('fecha');
         $hora = $this->request->input('hora') ?: $doc->hora;
-        if (empty($fecha)) {
-            $doc->hora = $hora;
-        } elseif (false === $doc->setDate($fecha, $hora)) {
+        if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([
@@ -114,7 +112,7 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya están asignadas)
+        // asignamos el resto de campos del modelo (fecha y hora ya las asigna setDate)
         foreach ($doc->getModelFields() as $key => $field) {
             if (in_array($key, ['fecha', 'hora'], true)) {
                 continue;
@@ -210,12 +208,10 @@ class ApiCreateDocument extends ApiController
             return;
         }
 
-        // asignamos la fecha y la hora; sin fecha, la hora se asigna sola
+        // asignamos la fecha
         $fecha = $this->request->input('fecha');
         $hora = $this->request->input('hora') ?: $doc->hora;
-        if (empty($fecha)) {
-            $doc->hora = $hora;
-        } elseif (false === $doc->setDate($fecha, $hora)) {
+        if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([
@@ -231,7 +227,7 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya están asignadas)
+        // asignamos el resto de campos del modelo (fecha y hora ya las asigna setDate)
         foreach ($doc->getModelFields() as $key => $field) {
             if (in_array($key, ['fecha', 'hora'], true)) {
                 continue;

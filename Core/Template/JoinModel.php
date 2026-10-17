@@ -24,23 +24,14 @@ use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Where;
 
 /**
- * Clase base de los modelos de vista (joins): permiten consultar en un único modelo
- * datos de varias tablas de la base de datos.
+ * Clase base de la que heredan todas las vistas de modelo.
+ * Permite la visualización de datos de varias tablas de la base de datos.
+ * Este tipo de modelo es solo para lectura de datos, no permite la modificación
+ * o eliminación de datos directamente.
  *
- * Son modelos de solo lectura: no tienen save() y no permiten insertar ni modificar datos.
- * Para eliminar o comprobar si existe un registro se usa un modelo principal ("master"),
- * un ModelClass de Core\Template que se asigna en el constructor con setMasterModel().
- * delete(), exists() y url() trabajan sobre el registro del master cuya clave primaria
- * coincide con la del join.
- *
- * Las subclases deben implementar:
- * - getFields(): los campos del SELECT, como alias => expresión SQL ('tabla.columna').
- *   Uno de los alias debe ser la clave primaria del master, porque load() e id() lo usan.
- * - getSQLFrom(): las tablas y uniones de la cláusula FROM.
- * - getTables(): las tablas que intervienen. Si falta alguna, all() y count() no devuelven
- *   nada. También se usan para obtener los tipos de los campos y para la clave de caché.
- *
- * Opcionalmente pueden sobrescribir getGroupFields() para añadir una cláusula GROUP BY.
+ * Se debe indicar un modelo principal ("master"), que será el responsable de ejecutar
+ * las acciones de modificación de datos. Esto significa que al insertar, modificar o eliminar,
+ * solo se realiza la operación sobre el modelo master indicado.
  *
  * @author Jose Antonio Cuello Principal    <yopli2000@gmail.com>
  * @author Carlos García Gómez              <carlos@facturascripts.com>
@@ -50,30 +41,22 @@ abstract class JoinModel
     /** @var DataBase */
     protected static $dataBase;
 
-    /** @var array Caché de campos (con tipos) por clase, para no consultar de nuevo la estructura de las tablas. */
+    /** @var array Caché de campos (con tipos) por clase, para evitar reintrospección. */
     private static $modelFieldsCache = [];
 
-    /** @var ModelClass Modelo principal (master) sobre el que se ejecutan delete(), exists() y url(). */
+    /** @var ModelClass Modelo principal para las operaciones de datos. */
     protected $masterModel;
 
     /** @var array Atributos del modelo. */
     private $attributes = [];
 
-    /**
-     * Devuelve los campos de la cláusula SELECT, como alias => expresión SQL.
-     * Por ejemplo: ['idpartida' => 'partidas.idpartida', 'total' => 'SUM(partidas.debe)'].
-     * Debe incluir la clave primaria del modelo master con su mismo nombre como alias.
-     */
+    /** Devuelve la lista de campos o columnas para la cláusula SELECT. */
     abstract protected function getFields(): array;
 
-    /** Devuelve las tablas y uniones (JOIN) de la cláusula FROM. */
+    /** Devuelve las tablas relacionadas para la cláusula FROM. */
     abstract protected function getSQLFrom(): string;
 
-    /**
-     * Devuelve las tablas necesarias para la vista. Si alguna no existe, all() y count()
-     * no devuelven resultados. También se usan para obtener el tipo de los campos y para
-     * invalidar la caché cuando cambia alguna de ellas.
-     */
+    /** Devuelve la lista de tablas necesarias para la ejecución de la vista. */
     abstract protected function getTables(): array;
 
     /** Constructor e inicializador de la clase. */
@@ -219,48 +202,22 @@ abstract class JoinModel
         return static::count([Where::eq($field, $value)]);
     }
 
-    /**
-     * Elimina de la base de datos el registro del modelo master con la clave primaria del join.
-     * Devuelve false si no hay modelo master o si su delete() no permite eliminarlo.
-     */
+    /** Elimina los datos del modelo master de la base de datos. */
     public function delete(): bool
     {
         if (isset($this->masterModel)) {
-            // cargamos el registro completo en el modelo master y no solo su clave primaria,
-            // para que su delete(), sus extensiones, onDelete() y el evento de WorkQueue
-            // tengan todos los datos (por ejemplo, Partida::delete() necesita el idasiento)
             $primaryColumn = $this->masterModel->primaryColumn();
-
-            // limpiamos antes de cargar porque el mismo modelo master se reutiliza en cada
-            // borrado y load() devuelve false sin limpiarlo cuando la clave es null o vacía:
-            // sin esto conservaría los datos de la fila eliminada anteriormente
-            $this->masterModel->clear();
-
-            // si el registro ya no existe, solo asignamos la clave primaria, como antes
-            if (false === $this->masterModel->load($this->id())) {
-                $this->masterModel->{$primaryColumn} = $this->id();
-            }
-
+            $this->masterModel->{$primaryColumn} = $this->id();
             return $this->masterModel->delete();
         }
 
         return false;
     }
 
-    /**
-     * Devuelve true si existe en la base de datos el registro del modelo master con la clave
-     * primaria del join. Sin modelo master, devuelve true si la vista tiene algún registro.
-     */
+    /** Devuelve true si los datos del modelo existen en la base de datos. */
     public function exists(): bool
     {
-        if (isset($this->masterModel)) {
-            // asignamos la clave al master, que no se actualiza al cargar el join
-            $primaryColumn = $this->masterModel->primaryColumn();
-            $this->masterModel->{$primaryColumn} = $this->id();
-            return $this->masterModel->exists();
-        }
-
-        return static::count() > 0;
+        return isset($this->masterModel) ? $this->masterModel->exists() : static::count() > 0;
     }
 
     /**
@@ -270,8 +227,8 @@ abstract class JoinModel
      */
     public function getModelFields(): array
     {
-        // la definición de campos es fija por clase, así que guardamos el
-        // resultado para no volver a consultar la estructura de las tablas
+        // la definición de campos es fija por clase, así que memoizamos el
+        // resultado para no volver a introspeccionar la estructura de tablas
         $class = static::class;
         if (isset(self::$modelFieldsCache[$class])) {
             return self::$modelFieldsCache[$class];
@@ -334,11 +291,9 @@ abstract class JoinModel
     }
 
     /**
-     * Carga el registro cuya clave primaria del modelo master es $code.
-     * Devuelve false y limpia el modelo si no hay master, si getFields() no incluye
-     * su clave primaria o si no se encuentra el registro.
+     * Carga un registro del modelo utilizando el código de la clave primaria del master model.
      *
-     * @param mixed $code Valor de la clave primaria del modelo master.
+     * @param mixed $code
      *
      * @return bool
      */
@@ -369,12 +324,12 @@ abstract class JoinModel
     /**
      * Carga un registro mediante un código o condiciones adicionales.
      *
-     * @param mixed $cod Valor de la clave primaria del modelo master. Se ignora si hay condiciones.
-     * @param Where[] $where Condiciones; si se indican, se usa loadWhere().
-     * @param array $orderby Ordenación, como columna => 'ASC' o 'DESC'.
+     * @param mixed $cod
+     * @param Where[] $where
+     * @param array $orderby
      * @return bool
      * @deprecated Usar load() cuando solo se necesita cargar por código, o loadWhere() cuando
-     *             se requieren condiciones WHERE u ordenación.
+     *             se requieren condiciones WHERE u ordenamiento adicionales.
      */
     public function loadFromCode($cod, array $where = [], array $orderby = []): bool
     {
@@ -443,7 +398,7 @@ abstract class JoinModel
     /**
      * Devuelve el valor de la clave primaria del modelo principal.
      * Contiene la implementación real y se mantiene como punto de extensión
-     * por compatibilidad con plugins que lo sobrescriben.
+     * por compatibilidad con plugins que lo sobreescriben.
      *
      * @return mixed
      * @deprecated Usar id() en su lugar.
@@ -495,10 +450,7 @@ abstract class JoinModel
         return $sum;
     }
 
-    /**
-     * Devuelve la URL del modelo master donde ver o modificar los datos.
-     * Asigna al master la clave primaria del join antes de obtenerla.
-     */
+    /** Devuelve la URL donde ver o modificar los datos. */
     public function url(string $type = 'auto', string $list = 'List'): string
     {
         if (isset($this->masterModel)) {
@@ -565,13 +517,13 @@ abstract class JoinModel
         return empty($fields) ? '' : ' GROUP BY ' . $fields;
     }
 
-    /** Devuelve los campos de la cláusula GROUP BY. Sobrescríbelo si la vista agrupa registros. */
+    /** Devuelve los campos para la cláusula GROUP BY. */
     protected function getGroupFields(): string
     {
         return '';
     }
 
-    /** Convierte un array de ordenación (columna => 'ASC' o 'DESC') en una cláusula ORDER BY. */
+    /** Convierte un array de ordenamiento en una cláusula ORDER BY. */
     private function getOrderBy(array $order): string
     {
         $result = '';
@@ -583,10 +535,7 @@ abstract class JoinModel
         return $result;
     }
 
-    /**
-     * Establece el modelo master, un ModelClass de Core\Template sobre el que se ejecutan
-     * delete(), exists() y url(). Se llama desde el constructor de la subclase.
-     */
+    /** Establece el modelo master para las operaciones de datos. */
     protected function setMasterModel($model): void
     {
         $this->masterModel = $model;

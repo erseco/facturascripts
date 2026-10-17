@@ -481,12 +481,10 @@ class ApiEditDocument extends ApiController
      */
     protected function updateHeader(BusinessDocument &$doc): bool
     {
-        // asignamos la fecha y la hora; sin fecha, la hora se asigna sola
+        // asignamos la fecha y la hora
         $fecha = $this->request->input('fecha');
         $hora = $this->request->input('hora') ?: $doc->hora;
-        if (empty($fecha)) {
-            $doc->hora = $hora;
-        } elseif (false === $doc->setDate($fecha, $hora)) {
+        if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([

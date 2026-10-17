@@ -25,7 +25,6 @@ use FacturaScripts\Core\Base\ControllerPermissions;
 use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Http;
 use FacturaScripts\Core\Internal\Forja;
-use FacturaScripts\Core\Internal\PhpExtensions;
 use FacturaScripts\Core\Internal\Plugin;
 use FacturaScripts\Core\Kernel;
 use FacturaScripts\Core\KernelException;
@@ -135,16 +134,8 @@ class Updater extends Controller
             ]);
         }
 
-        // avisamos de las extensiones de PHP que faltan
-        PhpExtensions::warnMissing();
-
-        // sin la extensión zip no se pueden instalar las actualizaciones
-        $action = $this->request->get('action', '');
-        if (in_array($action, ['download', 'update']) && PhpExtensions::missing(['zip'])) {
-            return;
-        }
-
         // en las acciones que escriben en disco, comprobamos que las carpetas sean escribibles
+        $action = $this->request->get('action', '');
         if (in_array($action, ['cancel', 'download', 'post-update', 'update'])) {
             $folders = $this->notWritableFolders();
             if ($folders) {
@@ -351,11 +342,6 @@ class Updater extends Controller
                 continue;
             }
 
-            // si la build requiere una versión de PHP más reciente, no la ofrecemos
-            if (false === Forja::isPhpCompatible($build)) {
-                continue;
-            }
-
             $item = [
                 'description' => Tools::trans('core-update', [
                     '%currentVersion%' => self::getCoreVersion(),
@@ -401,9 +387,6 @@ class Updater extends Controller
             }
             if ($build['maxcore'] > 0 && $build['maxcore'] < $coreVersion) {
                 continue; // Build demasiado antigua para el core actual
-            }
-            if (false === Forja::isPhpCompatible($build)) {
-                continue; // Requiere una versión de PHP más reciente
             }
 
             $item = [
@@ -478,9 +461,6 @@ class Updater extends Controller
 
         Migrations::run();
         Plugins::deploy(true, true);
-
-        // informamos a la telemetría de la nueva versión del core y de la lista de plugins
-        $this->telemetryManager->update(true);
     }
 
     private function setCoreWarnings(): void
@@ -600,7 +580,11 @@ class Updater extends Controller
         }
 
         // update files
-        self::updateRootFiles(Tools::folder(self::CORE_ZIP_FOLDER), Tools::folder());
+        foreach (['index.php', 'replace_index_to_restore.php'] as $name) {
+            $origin = Tools::folder(self::CORE_ZIP_FOLDER, $name);
+            $dest = Tools::folder($name);
+            copy($origin, $dest);
+        }
 
         // remove zip folder
         Tools::folderDelete(Tools::folder(self::CORE_ZIP_FOLDER));
@@ -617,21 +601,6 @@ class Updater extends Controller
         // remove zip file
         unlink(Tools::folder($fileName));
         return $return;
-    }
-
-    private static function updateRootFiles(string $originFolder, string $destFolder): void
-    {
-        foreach (['index.php', 'replace_index_to_restore.php'] as $name) {
-            copy($originFolder . DIRECTORY_SEPARATOR . $name, $destFolder . DIRECTORY_SEPARATOR . $name);
-        }
-
-        // Opcache solo compara la fecha de modificación: si replace_index_to_restore.php tiene la misma
-        // que index.php, al renombrarlo seguiría ejecutándose el index.php en caché
-        $index = $destFolder . DIRECTORY_SEPARATOR . 'index.php';
-        $restore = $destFolder . DIRECTORY_SEPARATOR . 'replace_index_to_restore.php';
-        if (file_exists($index) && file_exists($restore)) {
-            touch($restore, filemtime($index) - 60);
-        }
     }
 
     private function willItWorkOnNewCore(Plugin $plugin, float $newCore): bool

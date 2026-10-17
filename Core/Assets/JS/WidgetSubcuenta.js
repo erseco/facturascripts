@@ -28,11 +28,10 @@ function widgetSubaccountDraw(id, results) {
         const saldoClass = saldoValue < 0 ? ' text-danger' : '';
         const codsubcuenta = widgetSubaccountDecodeHtml(element.codsubcuenta);
         const descripcion = widgetSubaccountDecodeHtml(element.descripcion || '');
-        const match = widgetSubaccountDecodeHtml(element.match);
         const $row = $('<tr/>', {
             class: 'clickableRow widget-subaccount-option'
         }).data('widget-subaccount-id', id)
-            .data('widget-subaccount-value', match);
+            .data('widget-subaccount-value', codsubcuenta);
 
         const $link = $('<a/>', {
             class: 'widget-subaccount-link',
@@ -68,20 +67,8 @@ function widgetSubaccountDecodeHtml(value) {
     return textarea.value;
 }
 
-// Objeto para almacenar la búsqueda en curso de cada instancia del widget
-let widgetSubaccountSearchRequests = {};
-
-function widgetSubaccountSearch(id, selected) {
-    $("#list_" + id).empty().append(
-        $('<tr/>').append($('<td/>', {
-            class: 'text-center',
-            colspan: 4
-        }).append($('<div/>', {
-            class: 'spinner-border spinner-border-sm text-primary',
-            role: 'status'
-        })))
-    );
-
+function widgetSubaccountSearch(id) {
+    $("#list_" + id).empty();
     const input = $("#" + id);
     const data = {
         action: 'widget-subcuenta-search',
@@ -91,18 +78,7 @@ function widgetSubaccountSearch(id, selected) {
         codejercicio: $("#modal_" + id + "_ej").val(),
         sort: $("#modal_" + id + "_s").val()
     };
-
-    // en la carga inicial enviamos el valor actual para mostrarlo el primero
-    if (selected) {
-        data.selected = selected;
-    }
-
-    // cancelamos la búsqueda anterior para que no sobrescriba los resultados nuevos
-    if (widgetSubaccountSearchRequests[id]) {
-        widgetSubaccountSearchRequests[id].abort();
-    }
-
-    widgetSubaccountSearchRequests[id] = $.ajax({
+    $.ajax({
         method: "POST",
         url: window.location.href,
         data: data,
@@ -110,10 +86,7 @@ function widgetSubaccountSearch(id, selected) {
         success: function (results) {
             widgetSubaccountDraw(id, results);
         },
-        error: function (msg, status) {
-            if (status === 'abort') {
-                return;
-            }
+        error: function (msg) {
             alert(msg.status + " " + msg.responseText);
         }
     });
@@ -139,18 +112,6 @@ function widgetSubaccountSelect(id, value) {
     $("#modal_" + id).modal("hide");
     $("#modal_span_" + id).text(value);
 }
-
-// cargamos la lista la primera vez que se abre cada modal
-$(document).on('show.bs.modal', '.widget-subaccount-modal', function () {
-    const $modal = $(this);
-    if ($modal.data('widget-subaccount-loaded')) {
-        return;
-    }
-
-    $modal.data('widget-subaccount-loaded', true);
-    const id = $modal.data('widget-subaccount-id');
-    widgetSubaccountSearch(id, $("#" + id).val());
-});
 
 $(document).on('click', '.widget-subaccount-option', function () {
     const value = $(this).data('widget-subaccount-value');
