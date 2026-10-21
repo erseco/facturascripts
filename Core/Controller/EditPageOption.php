@@ -93,7 +93,7 @@ class EditPageOption extends Controller
     }
 
     /**
-     * Get the list of users, excluding the user admin unless it is the selected user
+     * Get the list of users, excluding the user admin
      *
      * @return array
      */
@@ -102,7 +102,7 @@ class EditPageOption extends Controller
         $result = [];
         $users = CodeModel::all(User::tableName(), 'nick', 'nick', false);
         foreach ($users as $codeModel) {
-            if ($codeModel->code != 'admin' || $codeModel->code === $this->selectedUser) {
+            if ($codeModel->code != 'admin') {
                 $result[$codeModel->code] = $codeModel->description;
             }
         }
@@ -125,7 +125,7 @@ class EditPageOption extends Controller
         $this->loadSelectedViewName();
         $this->setBackPage();
         $this->selectedUser = $this->user->admin ?
-            $this->request->inputOrQuery('nick') :
+            $this->request->queryOrInput('nick') :
             $this->user->nick;
         $this->loadPageOptions();
 

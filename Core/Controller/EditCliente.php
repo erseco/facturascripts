@@ -105,8 +105,7 @@ class EditCliente extends ComercialContactController
     protected function createDocumentView(string $viewName, string $model, string $label): void
     {
         $this->createCustomerListView($viewName, $model, $label)
-            ->setSettings('btnPrint', true)
-            ->setSettings('group', 'sales');
+            ->setSettings('btnPrint', true);
 
         // agrupamos las acciones en un dropdown
         $this->tab($viewName)->addButtonGroup([
@@ -122,7 +121,6 @@ class EditCliente extends ComercialContactController
     {
         $this->createCustomerListView($viewName, 'FacturaCliente', 'invoices')
             ->setSettings('btnPrint', true)
-            ->setSettings('group', 'sales')
             ->addFilterSelectWhere('status', [
                 ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
                 ['label' => '------', 'where' => []],
@@ -165,21 +163,7 @@ class EditCliente extends ComercialContactController
 
         if ($this->user->can('EditFacturaCliente')) {
             $this->createInvoiceView('ListFacturaCliente');
-        }
-        if ($this->user->can('EditReciboCliente')) {
-            $this->createReceiptView('ListReciboCliente', 'ReciboCliente')
-                ->setSettings('group', 'sales')
-                ->addFilterSelectWhere('status', [
-                    ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
-                    ['label' => '------', 'where' => []],
-                    ['label' => Tools::trans('paid'), 'where' => [Where::eq('pagado', true)]],
-                    ['label' => Tools::trans('unpaid'), 'where' => [Where::eq('pagado', false)]],
-                    ['label' => Tools::trans('expired-receipt'), 'where' => [Where::eq('vencido', true)]],
-                ]);
-        }
-        if ($this->user->can('EditFacturaCliente')) {
-            $this->createLineView('ListLineaFacturaCliente', 'LineaFacturaCliente')
-                ->setSettings('group', 'sales');
+            $this->createLineView('ListLineaFacturaCliente', 'LineaFacturaCliente');
         }
         if ($this->user->can('EditAlbaranCliente')) {
             $this->createDocumentView('ListAlbaranCliente', 'AlbaranCliente', 'delivery-notes');
@@ -189,6 +173,16 @@ class EditCliente extends ComercialContactController
         }
         if ($this->user->can('EditPresupuestoCliente')) {
             $this->createDocumentView('ListPresupuestoCliente', 'PresupuestoCliente', 'estimations');
+        }
+        if ($this->user->can('EditReciboCliente')) {
+            $this->createReceiptView('ListReciboCliente', 'ReciboCliente')
+                ->addFilterSelectWhere('status', [
+                    ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
+                    ['label' => '------', 'where' => []],
+                    ['label' => Tools::trans('paid'), 'where' => [Where::eq('pagado', true)]],
+                    ['label' => Tools::trans('unpaid'), 'where' => [Where::eq('pagado', false)]],
+                    ['label' => Tools::trans('expired-receipt'), 'where' => [Where::eq('vencido', true)]],
+                ]);
         }
     }
 
@@ -392,7 +386,7 @@ class EditCliente extends ComercialContactController
         $cliente = new Cliente();
         $codcliente = $this->request->input('codcliente');
         if (false === $cliente->load($codcliente)) {
-            Tools::log()->error('customer-not-found', ['%customer%' => $codcliente]);
+            Tools::log()->error('customer-not-found');
             return false;
         }
 

@@ -20,7 +20,6 @@
 namespace FacturaScripts\Core\Controller;
 
 use FacturaScripts\Core\Lib\Calculator;
-use FacturaScripts\Core\Lib\RefundReason;
 use FacturaScripts\Core\Response;
 use FacturaScripts\Core\Template\ApiController;
 use FacturaScripts\Core\Tools;
@@ -83,34 +82,8 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
             return null;
         }
 
-        // el motivo de rectificación, si se indica, debe ser uno de los disponibles
-        $reason = $this->request->input('motivorect');
-        if (!empty($reason) && null === RefundReason::get($reason)) {
-            $this->sendError('invalid-refund-reason', Response::HTTP_BAD_REQUEST, ['%reason%' => $reason]);
-            return null;
-        }
-
         $lines = [];
         $invoiceLines = $invoice->getLines();
-
-        // cada refund_X debe corresponder al idlinea de una línea de la factura,
-        // si no, acabaríamos rectificando la factura completa sin avisar
-        $lineIds = [];
-        foreach ($invoiceLines as $line) {
-            $lineIds[] = 'refund_' . $line->id();
-        }
-        foreach (array_keys($this->request->request->all()) as $key) {
-            if (str_starts_with((string)$key, 'refund_') && !in_array($key, $lineIds, true)) {
-                $this->response
-                    ->setHttpCode(Response::HTTP_BAD_REQUEST)
-                    ->json([
-                        'status' => 'error',
-                        'message' => $key . ' does not match any idlinea of the invoice',
-                    ]);
-                return null;
-            }
-        }
-
         foreach ($invoiceLines as $line) {
             $quantity = (float)$this->request->input('refund_' . $line->id(), '0');
             if (!empty($quantity)) {
@@ -149,11 +122,9 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
         $newRefund->idfacturarect = $invoice->idfactura;
         $newRefund->nick = $this->request->input('nick');
         $newRefund->observaciones = $this->request->input('observaciones');
-        $newRefund->motivorect = $reason ?: null;
 
-        // la hora es opcional: si no se indica, se usa la actual
         $date = $this->request->input('fecha');
-        $hour = $this->request->input('hora') ?: $newRefund->hora;
+        $hour = $this->request->input('hora');
         if (false === $newRefund->setDate($date, $hour)) {
             $this->sendError('error-set-date', Response::HTTP_BAD_REQUEST);
             $this->db()->rollback();
@@ -193,11 +164,8 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
             }
         }
 
-        // asignamos el estado indicado; si no se indica, conserva el de la factura original
-        $idestado = $this->request->input('idestado');
-        if (!empty($idestado)) {
-            $newRefund->idestado = $idestado;
-        }
+        // asignamos el estado de la factura
+        $newRefund->idestado = $this->request->input('idestado');
         if (false === $newRefund->save()) {
             $this->sendError('record-save-error', Response::HTTP_INTERNAL_SERVER_ERROR);
             $this->db()->rollback();
@@ -210,13 +178,13 @@ class ApiCreateFacturaRectificativaCliente extends ApiController
         return $newRefund;
     }
 
-    private function sendError(string $message, int $http_code, array $params = []): void
+    private function sendError(string $message, int $http_code): void
     {
         $this->response
             ->setHttpCode($http_code)
             ->json([
                 'status' => 'error',
-                'message' => Tools::trans($message, $params),
+                'message' => Tools::trans($message),
             ]);
     }
 }

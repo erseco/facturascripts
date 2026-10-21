@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2023 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -44,46 +44,12 @@ final class Forja
             });
         }
 
-        if (!is_array(self::$builds)) {
-            return [];
-        }
-
-        $result = [];
-        foreach (self::$builds as $project) {
-            if (
-                !is_array($project) ||
-                !isset($project['project'], $project['name']) ||
-                !is_int($project['project']) ||
-                !is_string($project['name']) ||
-                !isset($project['builds']) ||
-                !is_array($project['builds'])
-            ) {
-                continue;
-            }
-
-            $project['builds'] = array_values(array_filter($project['builds'], static function ($build): bool {
-                return is_array($build) &&
-                    isset($build['version'], $build['stable'], $build['beta']) &&
-                    is_numeric($build['version']) &&
-                    is_bool($build['stable']) &&
-                    is_bool($build['beta']) &&
-                    array_key_exists('mincore', $build) &&
-                    array_key_exists('maxcore', $build);
-            }));
-            $result[] = $project;
-        }
-
-        return $result;
+        return self::$builds ?? [];
     }
 
     public static function canUpdateCore(): bool
     {
         foreach (self::getBuilds(self::CORE_PROJECT_ID) as $build) {
-            // si la build requiere una versión de PHP más reciente, no se puede actualizar a ella
-            if (false === self::isPhpCompatible($build)) {
-                continue;
-            }
-
             if ($build['stable'] && $build['version'] > Kernel::version()) {
                 return true;
             }
@@ -122,25 +88,6 @@ final class Forja
         return [];
     }
 
-    /**
-     * Comprueba si la versión de PHP indicada (o la actual) cumple el min_php de la build.
-     * Si la build no indica una versión mínima válida, se considera compatible.
-     */
-    public static function isPhpCompatible(array $build, string $phpVersion = PHP_VERSION): bool
-    {
-        $minPhp = $build['min_php'] ?? null;
-        if (false === is_string($minPhp) && false === is_numeric($minPhp)) {
-            return true;
-        }
-
-        $minPhp = trim((string)$minPhp);
-        if (empty($minPhp) || 1 !== preg_match('/^\d+(\.\d+)*$/', $minPhp)) {
-            return true;
-        }
-
-        return version_compare($phpVersion, $minPhp, '>=');
-    }
-
     public static function plugins(): array
     {
         if (!isset(self::$pluginList)) {
@@ -149,12 +96,6 @@ final class Forja
             });
         }
 
-        if (!is_array(self::$pluginList)) {
-            return [];
-        }
-
-        return array_values(array_filter(self::$pluginList, static function ($item): bool {
-            return is_array($item) && isset($item['name']) && is_string($item['name']);
-        }));
+        return self::$pluginList ?? [];
     }
 }

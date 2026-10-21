@@ -172,12 +172,6 @@ abstract class SalesController extends PanelController
             return false;
         }
 
-        // comprobamos el token del formulario para evitar CSRF
-        if (false === $this->validateFormToken()) {
-            $this->sendJsonWithLogs(['ok' => false]);
-            return false;
-        }
-
         $model = $this->getModel();
         if (false === $model->delete()) {
             $this->sendJsonWithLogs(['ok' => false]);
@@ -505,8 +499,11 @@ abstract class SalesController extends PanelController
 
                 $view->loadData($code);
 
-                // ¿el usuario puede acceder a este documento? si no, se interrumpe la petición
-                $this->assertOwnerData($view->model);
+                // ¿el usuario puede acceder a este documento?
+                if (false === $this->checkOwnerData($view->model)) {
+                    $this->setTemplate('Error/AccessDenied');
+                    break;
+                }
 
                 // data not found?
                 $action = $this->request->input('action', '');

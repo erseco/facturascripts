@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2017-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2017-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -123,9 +123,9 @@ class WidgetAutocomplete extends WidgetSelect
     protected function assets(): void
     {
         $route = Tools::config('route');
-        AssetManager::addCss($route . '/node_modules/jquery-ui-dist/jquery-ui.min.css', 2);
-        AssetManager::addJs($route . '/node_modules/jquery-ui-dist/jquery-ui.min.js', 2);
-        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetAutocomplete.js');
+        AssetManager::addCss($route . '/node_modules/jquery-ui-dist/jquery-ui.min.css?v=' . Tools::date(), 2);
+        AssetManager::addJs($route . '/node_modules/jquery-ui-dist/jquery-ui.min.js?v=' . Tools::date(), 2);
+        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetAutocomplete.js?v=' . Tools::date());
     }
 
     /**
@@ -158,7 +158,6 @@ class WidgetAutocomplete extends WidgetSelect
             . ' data-fieldcode="' . $this->fieldcode . '"'
             . ' data-fieldtitle="' . $this->fieldtitle . '"'
             . ' data-fieldfilter="' . $this->fieldfilter . '"'
-            . ' data-fieldsign="' . $this->fieldSign() . '"'
             . ' data-strict="' . $this->strictStr() . '"'
             . $this->inputHtmlExtraParams() . '/>';
     }

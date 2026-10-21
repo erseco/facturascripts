@@ -242,7 +242,6 @@ class EditSettings extends PanelController
     protected function createViewStates(string $viewName = 'ListEstadoDocumento'): void
     {
         $this->addListView($viewName, 'EstadoDocumento', 'states', 'fa-solid fa-tags')
-            ->addOrderBy(['tipodoc', 'orden', 'idestado'], 'sort', 1)
             ->addOrderBy(['idestado'], 'id')
             ->addOrderBy(['nombre'], 'name')
             ->addSearchFields(['nombre']);

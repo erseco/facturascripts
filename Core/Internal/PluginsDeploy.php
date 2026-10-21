@@ -20,7 +20,6 @@
 namespace FacturaScripts\Core\Internal;
 
 use Exception;
-use FacturaScripts\Core\Lib\AssetManager;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Translator;
 use FacturaScripts\Dinamic\Model\Page;
@@ -115,9 +114,6 @@ final class PluginsDeploy
                 self::linkFiles($folder);
             }
         }
-
-        // cambiamos la versión de los assets para que los navegadores no usen los de su caché
-        AssetManager::updateVersion();
 
         // recargamos las traducciones
         Translator::deploy();

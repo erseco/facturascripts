@@ -54,13 +54,6 @@ class EditGrupoClientes extends EditController
 
     protected function addCustomerAction()
     {
-        if (false === $this->permissions->allowUpdate) {
-            Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
-            return;
-        }
-
         $codes = $this->request->request->getArray('codes');
         if (false === is_array($codes)) {
             return;
@@ -69,8 +62,8 @@ class EditGrupoClientes extends EditController
         $num = 0;
         $cliente = new Cliente();
         foreach ($codes as $code) {
-            if (false === $cliente->load($code)) {
-                continue;
+            if (false === $cliente->loadFromCode($code)) {
+                return;
             }
 
             $cliente->codgrupo = $this->request->query('code');
@@ -206,13 +199,6 @@ class EditGrupoClientes extends EditController
 
     protected function removeCustomerAction()
     {
-        if (false === $this->permissions->allowUpdate) {
-            Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
-            return;
-        }
-
         $codes = $this->request->request->getArray('codes');
         if (false === is_array($codes)) {
             return;
@@ -221,8 +207,8 @@ class EditGrupoClientes extends EditController
         $num = 0;
         $cliente = new Cliente();
         foreach ($codes as $code) {
-            if (false === $cliente->load($code)) {
-                continue;
+            if (false === $cliente->loadFromCode($code)) {
+                return;
             }
 
             $cliente->codgrupo = null;

@@ -24,8 +24,6 @@ use FacturaScripts\Core\Template\WorkerClass;
 use FacturaScripts\Dinamic\Model\Atributo;
 
 /**
- * Regenera las descripciones de los valores cuando cambia el nombre de un atributo.
- *
  * @author Daniel Fernández Giménez <hola@danielfg.es>
  */
 class AtributoWorker extends WorkerClass

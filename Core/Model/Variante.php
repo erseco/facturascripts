@@ -94,8 +94,7 @@ class Variante extends ModelClass
     public function codeModelSearch(string $query, string $fieldCode = '', array $where = []): array
     {
         $results = [];
-        // solo admitimos columnas del modelo, ya que el campo se concatena en el SQL
-        $field = array_key_exists($fieldCode, $this->getModelFields()) ? $fieldCode : $this->primaryColumn();
+        $field = empty($fieldCode) ? $this->primaryColumn() : $fieldCode;
         $find = Tools::noHtml(mb_strtolower($query, 'UTF8'));
 
         // agrupamos las opciones de búsqueda en un sub-where (Where::like ya añade los % si faltan)

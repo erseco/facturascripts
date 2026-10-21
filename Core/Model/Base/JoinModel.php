@@ -29,6 +29,9 @@ use FacturaScripts\Core\Cache;
  * @author Jose Antonio Cuello Principal    <yopli2000@gmail.com>
  * @author Carlos García Gómez              <carlos@facturascripts.com>
  */
+#[Deprecated(
+    reason: 'Use FacturaScripts\Core\Template\JoinModel instead',
+)]
 abstract class JoinModel
 {
     /**
@@ -206,21 +209,8 @@ abstract class JoinModel
     public function delete(): bool
     {
         if (isset($this->masterModel)) {
-            // cargamos el registro completo en el modelo master y no solo su clave primaria,
-            // para que su delete(), sus extensiones y el evento de WorkQueue tengan todos
-            // los datos (por ejemplo, Partida::delete() necesita el idasiento)
             $primaryColumn = $this->masterModel->primaryColumn();
-
-            // limpiamos antes de cargar porque el mismo modelo master se reutiliza en cada
-            // borrado: así nunca conserva los datos de la fila eliminada anteriormente
-            $this->masterModel->clear();
-
-            // usamos loadFromCode() porque el master puede ser un modelo antiguo sin load().
-            // Si el registro ya no existe, solo asignamos la clave primaria, como antes
-            if (false === $this->masterModel->loadFromCode($this->primaryColumnValue())) {
-                $this->masterModel->{$primaryColumn} = $this->primaryColumnValue();
-            }
-
+            $this->masterModel->{$primaryColumn} = $this->primaryColumnValue();
             return $this->masterModel->delete();
         }
 
@@ -234,14 +224,7 @@ abstract class JoinModel
      */
     public function exists(): bool
     {
-        if (isset($this->masterModel)) {
-            // asignamos la clave al master, que no se actualiza al cargar el join
-            $primaryColumn = $this->masterModel->primaryColumn();
-            $this->masterModel->{$primaryColumn} = $this->primaryColumnValue();
-            return $this->masterModel->exists();
-        }
-
-        return $this->count() > 0;
+        return isset($this->masterModel) ? $this->masterModel->exists() : $this->count() > 0;
     }
 
     public function getModelFields(): array

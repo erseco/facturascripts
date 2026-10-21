@@ -499,9 +499,7 @@ class InvoiceToAccounting extends AccountingClass
         }
 
         if (false === $this->exercise->load($this->document->codejercicio) || false === $this->exercise->isOpened()) {
-            Tools::log()->warning('closed-exercise', [
-                '%exerciseName%' => $this->exercise->nombre ?? $this->document->codejercicio
-            ]);
+            Tools::log()->warning('closed-exercise', ['%exerciseName%' => $this->document->codejercicio]);
             return false;
         }
 
@@ -517,7 +515,7 @@ class InvoiceToAccounting extends AccountingClass
 
         $where = [Where::eq('codejercicio', $this->document->codejercicio)];
         if (0 === Cuenta::count($where)) {
-            Tools::log()->warning('accounting-data-missing', ['%exerciseName%' => $this->exercise->nombre]);
+            Tools::log()->warning('accounting-data-missing', ['%exerciseName%' => $this->document->codejercicio]);
             return false;
         }
 

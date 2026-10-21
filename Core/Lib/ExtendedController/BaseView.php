@@ -23,7 +23,6 @@ use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Lib\Widget\VisualItem;
 use FacturaScripts\Core\Model\Base\ModelClass;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
 use FacturaScripts\Dinamic\Lib\Widget\ColumnItem;
 use FacturaScripts\Dinamic\Lib\Widget\GroupItem;
 use FacturaScripts\Dinamic\Lib\Widget\VisualItemLoadEngine;
@@ -142,9 +141,9 @@ abstract class BaseView
     abstract public function export(&$exportManager, $codes): bool;
 
     /**
-     * Loads view data. Si $limit es negativo se usa el límite de los ajustes; 0 significa sin límite.
+     * Loads view data.
      */
-    abstract public function loadData($code = '', $where = [], $order = [], $offset = 0, $limit = -1);
+    abstract public function loadData($code = '', $where = [], $order = [], $offset = 0, $limit = FS_ITEM_LIMIT);
 
     /**
      * Process form data.
@@ -182,10 +181,8 @@ abstract class BaseView
             'checkBoxes' => true,
             'clickable' => true,
             'customized' => false,
-            'group' => '',
             'itemLimit' => Tools::settings('default', 'item_limit', 50),
             'megasearch' => false,
-            'navigation' => true,
             'saveFilters' => false,
         ];
         $this->template = static::DEFAULT_TEMPLATE;
@@ -341,35 +338,6 @@ abstract class BaseView
     }
 
     /**
-     * Indica si la fila de acciones de la vista tiene un botón con la acción
-     * indicada. Si se indica un grupo, solo se busca dentro de ese grupo.
-     *
-     * @param string $action
-     * @param string $group
-     *
-     * @return bool
-     */
-    public function hasButton(string $action, string $group = ''): bool
-    {
-        $row = $this->getRow('actions');
-        return $row && method_exists($row, 'hasButton') && $row->hasButton($action, $group);
-    }
-
-    /**
-     * Indica si la fila de acciones de la vista tiene un grupo de botones
-     * (dropdown) con el nombre indicado.
-     *
-     * @param string $name
-     *
-     * @return bool
-     */
-    public function hasButtonGroup(string $name): bool
-    {
-        $row = $this->getRow('actions');
-        return $row && method_exists($row, 'hasButtonGroup') && $row->hasButtonGroup($name);
-    }
-
-    /**
      * Verifies the structure and loads into the model the given data array
      *
      * @param array $data
@@ -400,7 +368,10 @@ abstract class BaseView
         VisualItemLoadEngine::installXML($viewName, $this->pageOption);
 
         // si hay personalización guardada, superponemos sus cambios sobre el XML
-        $custom = $this->getCustomPageOption($viewName, $user);
+        $custom = PageOption::findWhere(
+            $this->getPageWhere($user),
+            ['nick' => 'ASC']
+        );
         if (false === is_null($custom)) {
             $this->settings['customized'] = true;
             VisualItemLoadEngine::mergeCustomization($this->pageOption, $custom);
@@ -444,14 +415,11 @@ abstract class BaseView
     /**
      * Añade un grupo de botones (dropdown) a la fila de acciones de la vista.
      * Después se pueden añadir botones a este grupo llamando a addButton()
-     * pasando la clave 'group' con el mismo nombre. Si el grupo ya existe, se
-     * actualizan sus datos (icono, etiqueta, color...) en lugar de duplicarlo.
+     * pasando la clave 'group' con el mismo nombre.
      *
-     * @param array $groupArray debe incluir la clave 'name', que identifica el grupo
+     * @param array $groupArray
      *
      * @return BaseView
-     *
-     * @throws \InvalidArgumentException si falta 'name' o está vacío
      */
     public function addButtonGroup(array $groupArray): BaseView
     {
@@ -489,33 +457,6 @@ abstract class BaseView
         }
 
         return null;
-    }
-
-    /**
-     * Devuelve la personalización guardada de la vista: la del usuario si existe o, en su defecto, la general.
-     *
-     * @param string $viewName
-     * @param User|false $user
-     *
-     * @return PageOption|null
-     */
-    protected function getCustomPageOption(string $viewName, $user = false): ?PageOption
-    {
-        // no ordenamos por nick: MySQL y MariaDB colocan los NULL primero y PostgreSQL al final
-        if (false === is_bool($user)) {
-            $custom = PageOption::findWhere([
-                Where::eq('name', $viewName),
-                Where::eq('nick', $user->nick),
-            ]);
-            if (null !== $custom) {
-                return $custom;
-            }
-        }
-
-        return PageOption::findWhere([
-            Where::eq('name', $viewName),
-            Where::isNull('nick'),
-        ]);
     }
 
     /**

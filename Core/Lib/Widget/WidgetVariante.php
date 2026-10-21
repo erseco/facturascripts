@@ -134,7 +134,7 @@ class WidgetVariante extends WidgetText
 
         // cargamos y añadimos la variante seleccionada
         $model = new Variante();
-        if ($this->value && $model->loadWhereEq($this->match, $this->value)) {
+        if ($this->value && $model->load($this->value)) {
             $list[] = $model;
             $where[] = Where::notEq('variantes.referencia', $model->referencia);
         }
@@ -179,25 +179,8 @@ class WidgetVariante extends WidgetText
                 break;
         }
 
-        $ids = [];
         foreach ($joinModel->all($where, $orderBy, 0, 50) as $item) {
-            $ids[] = $item->idvariante;
-        }
-        if (empty($ids)) {
-            return $list;
-        }
-
-        // cargamos todas las variantes en una sola consulta
-        $variantes = [];
-        foreach (Variante::all([Where::in('idvariante', $ids)], [], 0, 0) as $variante) {
-            $variantes[$variante->idvariante] = $variante;
-        }
-
-        // respetamos el orden de la búsqueda
-        foreach ($ids as $id) {
-            if (isset($variantes[$id])) {
-                $list[] = $variantes[$id];
-            }
+            $list[] = $model->get($item->idvariante);
         }
 
         return $list;
@@ -206,7 +189,7 @@ class WidgetVariante extends WidgetText
     protected function assets(): void
     {
         $route = Tools::config('route');
-        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetVariante.js');
+        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetVariante.js?v=' . Tools::date());
     }
 
     protected function renderFamilyFilter(): string
@@ -262,8 +245,8 @@ class WidgetVariante extends WidgetText
 
     protected function renderModal(string $icon, string $label): string
     {
-        return '<div class="modal fade widget-variante-modal" id="modal_' . $this->id . '" data-widget-variante-id="'
-            . $this->id . '" tabindex="-1" aria-labelledby="modal_' . $this->id . '_label" aria-hidden="true">'
+        return '<div class="modal fade" id="modal_' . $this->id . '" tabindex="-1" aria-labelledby="modal_'
+            . $this->id . '_label" aria-hidden="true">'
             . '<div class="modal-dialog modal-xl">'
             . '<div class="modal-content">'
             . '<div class="modal-header">'
@@ -339,7 +322,41 @@ class WidgetVariante extends WidgetText
 
     protected function renderVariantList(): string
     {
-        // la lista se carga por ajax al abrir el modal
+        $items = [];
+        foreach ($this->variantes() as $item) {
+            $match = $this->escapeHtml($item->{$this->match});
+            $description = $this->escapeHtml(Tools::textBreak($item->description(), 300));
+            $reference = $this->escapeHtml($item->referencia);
+            $url = $this->escapeHtml($item->url());
+
+            // Determinar la clase de color para el precio
+            $priceClass = '';
+            if ($item->precio < 0) {
+                $priceClass = ' text-danger';
+            } elseif ($item->precio == 0) {
+                $priceClass = ' text-warning';
+            }
+
+            // Determinar la clase de color para el stock
+            $stockClass = '';
+            if ($item->stockfis < 0) {
+                $stockClass = ' text-danger';
+            } elseif ($item->stockfis == 0) {
+                $stockClass = ' text-warning';
+            }
+
+            $items[] = '<tr class="clickableRow widget-variante-option" data-widget-variante-id="' . $this->id . '" data-widget-variante-value="' . $match . '">'
+                . '<td class="text-center">'
+                . '<a href="' . $url . '" target="_blank" class="widget-variante-link">'
+                . '<i class="fa-solid fa-external-link-alt fa-fw"></i>'
+                . '</a>'
+                . '</td>'
+                . '<td><b>' . $reference . '</b> ' . $description . '</td>'
+                . '<td class="text-end text-nowrap' . $priceClass . '">' . Tools::money($item->precio) . '</td>'
+                . '<td class="text-end text-nowrap' . $stockClass . '">' . Tools::number($item->stockfis, 0) . '</td>'
+                . '</tr>';
+        }
+
         return '<div class="table-responsive">'
             . '<table class="table table-hover mb-0">'
             . '<thead>'
@@ -350,7 +367,7 @@ class WidgetVariante extends WidgetText
             . '<th class="text-end">' . Tools::trans('stock') . '</th>'
             . '</tr>'
             . '</thead>'
-            . '<tbody id="list_' . $this->id . '"></tbody>'
+            . '<tbody id="list_' . $this->id . '">' . implode('', $items) . '</tbody>'
             . '</table>'
             . '</div>';
     }

@@ -86,8 +86,7 @@ class EditProveedor extends ComercialContactController
     protected function createDocumentView(string $viewName, string $model, string $label): void
     {
         $this->createSupplierListView($viewName, $model, $label)
-            ->setSettings('btnPrint', true)
-            ->setSettings('group', 'purchases');
+            ->setSettings('btnPrint', true);
 
         // agrupamos las acciones en un dropdown
         $this->tab($viewName)->addButtonGroup([
@@ -103,7 +102,6 @@ class EditProveedor extends ComercialContactController
     {
         $this->createSupplierListView($viewName, 'FacturaProveedor', 'invoices')
             ->setSettings('btnPrint', true)
-            ->setSettings('group', 'purchases')
             ->addFilterSelectWhere('status', [
                 ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
                 ['label' => '------', 'where' => []],
@@ -164,17 +162,6 @@ class EditProveedor extends ComercialContactController
         if ($this->user->can('EditFacturaProveedor')) {
             $this->createInvoiceView('ListFacturaProveedor');
         }
-        if ($this->user->can('EditReciboProveedor')) {
-            $this->createReceiptView('ListReciboProveedor', 'ReciboProveedor')
-                ->setSettings('group', 'purchases')
-                ->addFilterSelectWhere('status', [
-                    ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
-                    ['label' => '------', 'where' => []],
-                    ['label' => Tools::trans('paid'), 'where' => [Where::eq('pagado', true)]],
-                    ['label' => Tools::trans('unpaid'), 'where' => [Where::eq('pagado', false)]],
-                    ['label' => Tools::trans('expired-receipt'), 'where' => [Where::eq('vencido', true)]],
-                ]);
-        }
         if ($this->user->can('EditAlbaranProveedor')) {
             $this->createDocumentView('ListAlbaranProveedor', 'AlbaranProveedor', 'delivery-notes');
         }
@@ -183,6 +170,16 @@ class EditProveedor extends ComercialContactController
         }
         if ($this->user->can('EditPresupuestoProveedor')) {
             $this->createDocumentView('ListPresupuestoProveedor', 'PresupuestoProveedor', 'estimations');
+        }
+        if ($this->user->can('EditReciboProveedor')) {
+            $this->createReceiptView('ListReciboProveedor', 'ReciboProveedor')
+                ->addFilterSelectWhere('status', [
+                    ['label' => Tools::trans('paid-or-unpaid'), 'where' => []],
+                    ['label' => '------', 'where' => []],
+                    ['label' => Tools::trans('paid'), 'where' => [Where::eq('pagado', true)]],
+                    ['label' => Tools::trans('unpaid'), 'where' => [Where::eq('pagado', false)]],
+                    ['label' => Tools::trans('expired-receipt'), 'where' => [Where::eq('vencido', true)]],
+                ]);
         }
     }
 
