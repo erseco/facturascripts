@@ -220,12 +220,10 @@ final class Cache
      *
      * Si el directorio no existe se crea con permisos `0777` recursivamente, para que tanto el
      * proceso de PHP como otros usuarios del sistema (CLI, otra instancia, etc.) puedan operar
-     * sobre la caché. A cada fichero se le aplica `chmod 0666` para evitar problemas en entornos
-     * donde la umask por defecto deja los ficheros sin permisos de escritura para el grupo. El valor
-     * se serializa con `serialize()`, así que puede ser cualquier tipo serializable de PHP.
-     *
-     * La escritura es atómica: el contenido se escribe en un fichero temporal que después se renombra
-     * sobre el definitivo, así que una lectura concurrente nunca ve un fichero vacío o a medias.
+     * sobre la caché. La primera vez que se crea un fichero se le aplica `chmod 0666` para evitar
+     * problemas en entornos donde la umask por defecto deja los ficheros sin permisos de escritura
+     * para el grupo. El valor se serializa con `serialize()`, así que puede ser cualquier tipo
+     * serializable de PHP.
      */
     public static function set(string $key, $value): void
     {
@@ -235,17 +233,16 @@ final class Cache
             mkdir($folder, 0777, true);
         }
 
-        // guardamos el contenido en un fichero temporal de la misma carpeta
+        // guardamos el contenido
+        $data = serialize($value);
         $fileName = self::filename($key);
-        $tmpName = $fileName . '.' . bin2hex(random_bytes(8)) . '.tmp';
-        if (false === file_put_contents($tmpName, serialize($value))) {
-            return;
-        }
+        $exists = file_exists($fileName);
 
-        // le damos permisos de escritura y lo renombramos sobre el definitivo
-        chmod($tmpName, 0666);
-        if (false === rename($tmpName, $fileName)) {
-            unlink($tmpName);
+        file_put_contents($fileName, $data);
+
+        // si no existía el archivo, le damos permisos de escritura
+        if (!$exists) {
+            chmod($fileName, 0666);
         }
     }
 

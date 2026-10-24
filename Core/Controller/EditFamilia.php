@@ -51,13 +51,6 @@ class EditFamilia extends EditController
 
     protected function addProductAction(): void
     {
-        if (false === $this->permissions->allowUpdate) {
-            Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
-            return;
-        }
-
         $codes = $this->request->request->getArray('codes');
         if (false === is_array($codes)) {
             return;
@@ -66,7 +59,7 @@ class EditFamilia extends EditController
         $num = 0;
         foreach ($codes as $code) {
             $product = new Producto();
-            if (false === $product->load($code)) {
+            if (false === $product->loadFromCode($code)) {
                 continue;
             }
 
@@ -85,19 +78,18 @@ class EditFamilia extends EditController
     protected function createViews()
     {
         parent::createViews();
+        $this->setTabsPosition('bottom');
 
         // más pestañas
-        $this->createViewFamilies();
         $this->createViewProducts();
         $this->createViewNewProducts();
+        $this->createViewFamilies();
     }
 
     protected function createViewFamilies(string $viewName = 'ListFamilia'): void
     {
-        $this->addListView($viewName, 'Familia', 'subfamilies', 'fa-solid fa-folder-tree')
-            ->addSearchFields(['descripcion', 'codfamilia'])
+        $this->addListView($viewName, 'Familia', 'subfamilies', 'fa-solid fa-sitemap')
             ->addOrderBy(['codfamilia'], 'code')
-            ->addOrderBy(['numproductos'], 'products')
             // desactivamos la columna de familia padre y el botón de eliminar
             ->disableColumn('parent')
             ->setSettings('btnDelete', false);
@@ -105,8 +97,7 @@ class EditFamilia extends EditController
 
     protected function createViewNewProducts(string $viewName = 'ListProducto-new'): void
     {
-        $this->addListView($viewName, 'Producto', 'add', 'fa-solid fa-folder-plus')
-            ->setSettings('group', 'products');
+        $this->addListView($viewName, 'Producto', 'add', 'fa-solid fa-folder-plus');
         $this->createViewProductsCommon($viewName);
 
         // botón añadir producto
@@ -120,8 +111,7 @@ class EditFamilia extends EditController
 
     protected function createViewProducts(string $viewName = 'ListProducto'): void
     {
-        $this->addListView($viewName, 'Producto', 'products', 'fa-solid fa-cubes')
-            ->setSettings('group', 'products');
+        $this->addListView($viewName, 'Producto', 'products', 'fa-solid fa-cubes');
         $this->createViewProductsCommon($viewName);
 
         // botón quitar producto
@@ -222,13 +212,6 @@ class EditFamilia extends EditController
 
     protected function removeProductAction(): void
     {
-        if (false === $this->permissions->allowUpdate) {
-            Tools::log()->warning('not-allowed-update');
-            return;
-        } elseif (false === $this->validateFormToken()) {
-            return;
-        }
-
         $codes = $this->request->request->getArray('codes');
         if (false === is_array($codes)) {
             return;
@@ -237,7 +220,7 @@ class EditFamilia extends EditController
         $num = 0;
         foreach ($codes as $code) {
             $product = new Producto();
-            if (false === $product->load($code)) {
+            if (false === $product->loadFromCode($code)) {
                 continue;
             }
 

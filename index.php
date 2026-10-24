@@ -54,20 +54,13 @@ $url = isset($argv[1]) && $argv[1] === '-cron' ?
     '/cron' :
     parse_url($_SERVER["REQUEST_URI"] ?? '', PHP_URL_PATH) ?? '';
 
-// iniciamos los plugins, a menos que la ruta sea /deploy o falte la configuración de la base de datos,
-// porque entonces se muestra el instalador y los plugins no pueden usar la base de datos
-if ($url !== '/deploy' && '' !== Tools::config('db_name', '')) {
+// iniciamos los plugins, a menos que la ruta sea /deploy
+if ($url !== '/deploy') {
     Plugins::init();
 }
 
 // ejecutamos el controlador
 Kernel::run($url);
-
-// si la petición ha sustituido archivos (actualización del núcleo o de un plugin), no ejecutamos nada más:
-// las clases nuevas del disco se mezclarían con las antiguas que ya están cargadas en memoria
-if (Kernel::codeReplaced()) {
-    return;
-}
 
 $db = new DataBase();
 if ($db->connected()) {

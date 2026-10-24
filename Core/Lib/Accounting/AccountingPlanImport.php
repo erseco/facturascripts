@@ -28,6 +28,7 @@ use FacturaScripts\Dinamic\Model\Cuenta;
 use FacturaScripts\Dinamic\Model\CuentaEspecial;
 use FacturaScripts\Dinamic\Model\Ejercicio;
 use FacturaScripts\Dinamic\Model\Subcuenta;
+use ParseCsv\Csv;
 use SimpleXMLElement;
 
 /**
@@ -387,7 +388,8 @@ class AccountingPlanImport
      */
     protected function processCsvData(string $filePath): bool
     {
-        $csv = CSVImport::readFile($filePath);
+        $csv = new Csv();
+        $csv->auto($filePath);
 
         // Verificar que el CSV tenga al menos 2 columnas (código y descripción)
         if (count($csv->titles) < 2) {

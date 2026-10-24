@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2013-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -24,7 +24,6 @@ use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Model\CuentaBanco as DinCuentaBanco;
-use FacturaScripts\Dinamic\Model\CuentaEspecial as DinCuentaEspecial;
 
 /**
  * Payment method of an invoice, delivery note, order or estimation.
@@ -34,8 +33,6 @@ use FacturaScripts\Dinamic\Model\CuentaEspecial as DinCuentaEspecial;
 class FormaPago extends ModelClass
 {
     use ModelTrait;
-
-    const SPECIAL_ACCOUNT = 'CAJA';
 
     /** @var bool Indica si la forma de pago está activa. */
     public $activa;
@@ -107,19 +104,7 @@ class FormaPago extends ModelClass
 
     public function getSubcuenta(string $codejercicio, bool $create): Subcuenta
     {
-        // si no tiene cuenta bancaria, el pago va a la subcuenta especial de caja
-        $bank = $this->getBankAccount();
-        if (false === $bank->exists()) {
-            $especial = new DinCuentaEspecial();
-            if ($especial->load(static::SPECIAL_ACCOUNT)) {
-                $subcuenta = $especial->getSubcuenta($codejercicio);
-                if (!empty($subcuenta->codsubcuenta)) {
-                    return $subcuenta;
-                }
-            }
-        }
-
-        return $bank->getSubcuenta($codejercicio, $create);
+        return $this->getBankAccount()->getSubcuenta($codejercicio, $create);
     }
 
     public function getSubcuentaGastos(string $codejercicio, bool $create): Subcuenta

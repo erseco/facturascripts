@@ -148,10 +148,8 @@ class EditSettings extends PanelController
             }
         }
 
-        // Añadimos el resto de pestañas. Las claves de la API solo las ven los administradores
-        if ($this->user->admin) {
-            $this->createViewsApiKeys();
-        }
+        // Añadimos el resto de pestañas
+        $this->createViewsApiKeys();
         $this->createViewsIdFiscal();
         $this->createViewSequences();
         $this->createViewStates();
@@ -244,7 +242,6 @@ class EditSettings extends PanelController
     protected function createViewStates(string $viewName = 'ListEstadoDocumento'): void
     {
         $this->addListView($viewName, 'EstadoDocumento', 'states', 'fa-solid fa-tags')
-            ->addOrderBy(['tipodoc', 'orden', 'idestado'], 'sort', 1)
             ->addOrderBy(['idestado'], 'id')
             ->addOrderBy(['nombre'], 'name')
             ->addSearchFields(['nombre']);

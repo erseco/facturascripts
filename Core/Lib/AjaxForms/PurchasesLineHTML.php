@@ -175,7 +175,7 @@ class PurchasesLineHTML
     {
         self::$num++;
         $idlinea = $line->idlinea ?? 'n' . self::$num;
-        return '<div class="container-fluid fs-line"><div class="row g-2 align-items-end align-items-lg-center border-bottom pb-3 pb-lg-0">'
+        return '<div class="container-fluid fs-line"><div class="row g-2 align-items-center border-bottom pb-3 pb-lg-0">'
             . self::renderField($idlinea, $line, $model, 'referencia')
             . self::renderField($idlinea, $line, $model, 'descripcion')
             . self::renderField($idlinea, $line, $model, 'cantidad')
@@ -196,7 +196,7 @@ class PurchasesLineHTML
         $line->dtopor2 = (float)$formData['dtopor2_' . $id];
         $line->descripcion = $formData['descripcion_' . $id];
         $line->excepcioniva = $formData['excepcioniva_' . $id] ?? null;
-        $line->setRetention($formData['codretencion_' . $id] ?? null);
+        $line->irpf = (float)($formData['irpf_' . $id] ?? '0');
         $line->suplido = (bool)($formData['suplido_' . $id] ?? '0');
         $line->pvpunitario = (float)$formData['pvpunitario_' . $id];
 

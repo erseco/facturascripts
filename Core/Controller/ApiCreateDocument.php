@@ -93,17 +93,15 @@ class ApiCreateDocument extends ApiController
             return;
         }
 
-        // asignamos la fecha y la hora; sin fecha, la hora se asigna sola
+        // asignamos la fecha
         $fecha = $this->request->input('fecha');
-        $hora = $this->request->input('hora') ?: $doc->hora;
-        if (empty($fecha)) {
-            $doc->hora = $hora;
-        } elseif (false === $doc->setDate($fecha, $hora)) {
+        $hora = $this->request->input('hora', $doc->hora);
+        if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([
                     'status' => 'error',
-                    'message' => Tools::trans('invalid-date', ['%date%' => $fecha]),
+                    'message' => Tools::trans('invalid-date'),
                 ]);
             return;
         }
@@ -114,11 +112,8 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya están asignadas)
+        // asignamos el resto de campos del modelo
         foreach ($doc->getModelFields() as $key => $field) {
-            if (in_array($key, ['fecha', 'hora'], true)) {
-                continue;
-            }
             if ($this->request->request->has($key)) {
                 $doc->{$key} = $this->request->input($key);
             }
@@ -210,17 +205,15 @@ class ApiCreateDocument extends ApiController
             return;
         }
 
-        // asignamos la fecha y la hora; sin fecha, la hora se asigna sola
+        // asignamos la fecha
         $fecha = $this->request->input('fecha');
-        $hora = $this->request->input('hora') ?: $doc->hora;
-        if (empty($fecha)) {
-            $doc->hora = $hora;
-        } elseif (false === $doc->setDate($fecha, $hora)) {
+        $hora = $this->request->input('hora', $doc->hora);
+        if ($fecha && false === $doc->setDate($fecha, $hora)) {
             $this->response
                 ->setHttpCode(Response::HTTP_BAD_REQUEST)
                 ->json([
                     'status' => 'error',
-                    'message' => Tools::trans('invalid-date', ['%date%' => $fecha]),
+                    'message' => Tools::trans('invalid-date'),
                 ]);
             return;
         }
@@ -231,11 +224,8 @@ class ApiCreateDocument extends ApiController
             $doc->setCurrency($coddivisa);
         }
 
-        // asignamos el resto de campos del modelo (fecha y hora ya están asignadas)
+        // asignamos el resto de campos del modelo
         foreach ($doc->getModelFields() as $key => $field) {
-            if (in_array($key, ['fecha', 'hora'], true)) {
-                continue;
-            }
             if ($this->request->request->has($key)) {
                 $doc->{$key} = $this->request->input($key);
             }

@@ -29,6 +29,7 @@ use FacturaScripts\Core\Lib\Import\CSVImport;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
+use JetBrains\PhpStorm\Deprecated;
 
 /**
  * Clase base de la que heredan todos los modelos. Se encarga de la conexión
@@ -362,8 +363,7 @@ abstract class ModelClass
 
     /**
      * Devuelve los nombres de campos que no deben exponerse en la API
-     * (ni en GET, ni en el schema). Tampoco se pueden escribir mediante
-     * POST o PUT, salvo las claves de columnas json. Los modelos con datos sensibles
+     * (ni en GET, ni en el schema). Los modelos con datos sensibles
      * deben sobrescribir este método fusionando con parent::getApiFieldsToHide().
      *
      * @return string[]
@@ -680,6 +680,10 @@ abstract class ModelClass
      * @return mixed
      * @deprecated Usar id() en su lugar
      */
+    #[Deprecated(
+        reason: 'Usar id() en su lugar',
+        replacement: '%class%->id()',
+    )]
     public function primaryColumnValue()
     {
         return $this->{static::primaryColumn()};

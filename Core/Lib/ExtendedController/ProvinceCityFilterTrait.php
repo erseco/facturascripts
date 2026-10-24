@@ -36,11 +36,7 @@ trait ProvinceCityFilterTrait
 {
     protected function autocompleteAction(): array
     {
-        $data = $this->requestGet(['source', 'fieldcode', 'fieldfilter', 'fieldsign', 'fieldtitle', 'strict', 'term']);
-        if (in_array($data['source'], ['provincias', 'ciudades'], true) && false === $this->validFieldSign($data)) {
-            return [];
-        }
-
+        $data = $this->requestGet(['source', 'fieldcode', 'fieldtitle', 'strict', 'term']);
         switch ($data['source']) {
             case 'provincias':
                 return $this->autocompleteProvince($data);

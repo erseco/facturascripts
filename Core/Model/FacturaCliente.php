@@ -43,7 +43,6 @@ class FacturaCliente extends SalesDocument
         parent::__construct($data);
 
         self::$dont_copy_fields[] = 'fechadevengo';
-        self::$dont_copy_fields[] = 'motivorect';
     }
 
     public function clear(): void
@@ -84,7 +83,6 @@ class FacturaCliente extends SalesDocument
         $newLine->excepcioniva = $this->getSubject()->excepcioniva;
         $newLine->idfactura = $this->idfactura;
         $newLine->irpf = $this->irpf;
-        $newLine->codretencion = $this->getRetentionFromPercentage($this->irpf)?->codretencion;
         $newLine->loadFromData($data, $exclude);
 
         // si no viene de getNewProductLine(), calculamos la línea
@@ -141,11 +139,6 @@ class FacturaCliente extends SalesDocument
     public static function tableName(): string
     {
         return 'facturascli';
-    }
-
-    public function test(): bool
-    {
-        return $this->testRefundReason() && parent::test();
     }
 
     protected function saveInsert(): bool

@@ -26,18 +26,15 @@ use FacturaScripts\Core\Contract\SalesModalInterface;
 use FacturaScripts\Core\DataSrc\Empresas;
 use FacturaScripts\Core\DataSrc\Fabricantes;
 use FacturaScripts\Core\DataSrc\Familias;
-use FacturaScripts\Core\DataSrc\Impuestos;
 use FacturaScripts\Core\DataSrc\Paises;
 use FacturaScripts\Core\Model\Base\SalesDocument;
 use FacturaScripts\Core\Model\User;
 use FacturaScripts\Core\Session;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Lib\ProductType;
 use FacturaScripts\Dinamic\Model\AtributoValor;
 use FacturaScripts\Dinamic\Model\Cliente;
 use FacturaScripts\Dinamic\Model\Familia;
-use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\RoleAccess;
 
 /**
@@ -143,7 +140,6 @@ class SalesModalHTML
                 . ' return salesFormAction(\'add-product\', this.dataset.reference);">'
                 . '<td><b>' . $reference . '</b> ' . $description . '</td>'
                 . '<td class="text-end">' . str_replace(' ', '&nbsp;', Tools::money($row['precio'])) . '</td>'
-                . '<td class="text-end">' . str_replace(' ', '&nbsp;', Tools::money(static::priceWithTax($row))) . '</td>'
                 . self::renderNewProduct($row);
 
             if (self::$vendido) {
@@ -155,8 +151,7 @@ class SalesModalHTML
         }
 
         if (empty($tbody)) {
-            $colspan = 4 + count(self::newProductFields()) + (self::$vendido ? 1 : 0);
-            $tbody .= '<tr class="table-warning"><td colspan="' . $colspan . '">' . Tools::trans('no-data') . '</td></tr>';
+            $tbody .= '<tr class="table-warning"><td colspan="4">' . Tools::trans('no-data') . '</td></tr>';
         }
 
         $extraTh = self::$vendido ?
@@ -167,7 +162,6 @@ class SalesModalHTML
             . '<tr>'
             . '<th>' . Tools::trans('product') . '</th>'
             . '<th class="text-end">' . Tools::trans('price') . '</th>'
-            . '<th class="text-end">' . Tools::trans('price-with-tax') . '</th>'
             . self::renderNewProductHeads()
             . $extraTh
             . '<th class="text-end">' . Tools::trans('stock') . '</th>'
@@ -278,11 +272,13 @@ class SalesModalHTML
             if (count($words) === 1) {
                 $sql .= " AND (LOWER(v.codbarras) = " . $dataBase->var2str(self::$query)
                     . " OR LOWER(v.referencia) LIKE '%" . self::$query . "%'"
-                    . " OR " . static::wordFilter(self::$query) . ")";
+                    . " OR LOWER(p.descripcion) LIKE '%" . self::$query . "%')";
             } elseif (count($words) > 1) {
                 $sql .= " AND (LOWER(v.referencia) LIKE '%" . self::$query . "%' OR (";
                 foreach ($words as $wc => $word) {
-                    $sql .= $wc > 0 ? ' AND ' . static::wordFilter($word) : static::wordFilter($word);
+                    $sql .= $wc > 0 ?
+                        " AND LOWER(p.descripcion) LIKE '%" . $word . "%'" :
+                        "LOWER(p.descripcion) LIKE '%" . $word . "%'";
                 }
                 $sql .= "))";
             }
@@ -397,7 +393,7 @@ class SalesModalHTML
             . Tools::trans('new-customer') . '</h5>'
             . '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
             . '</div>'
-            . '<div class="modal-body" onkeydown="return newCustomerKeyDown(event);">'
+            . '<div class="modal-body">'
             . '<div class="row g-2">'
             . '<div class="col-sm-8"><label for="newCustomerName" class="form-label">' . Tools::trans('name') . '</label>'
             . '<input type="text" name="newcustomer_nombre" id="newCustomerName" class="form-control" maxlength="100" required></div>'
@@ -509,23 +505,6 @@ class SalesModalHTML
             . '</div>';
     }
 
-    /**
-     * Precio de venta con el impuesto del producto, igual que Variante::priceWithTax(),
-     * pero a partir de los datos de la fila para no consultar cada producto.
-     */
-    protected static function priceWithTax(array $row): float
-    {
-        $iva = (float)Impuestos::get($row['codimpuesto'])->iva;
-
-        // en los productos de segunda mano el impuesto se aplica solo sobre el margen
-        if ($row['tipo'] === ProductType::SECOND_HAND) {
-            $diff = $row['precio'] - $row['coste'];
-            return round($row['precio'] + ($diff * $iva / 100), Producto::ROUND_DECIMALS);
-        }
-
-        return round($row['precio'] * (100 + $iva) / 100, Producto::ROUND_DECIMALS);
-    }
-
     protected static function setProductsLastPrice(DataBase $db, array &$items): void
     {
         foreach ($items as $key => $item) {
@@ -534,7 +513,7 @@ class SalesModalHTML
                 . ' LEFT JOIN facturascli f ON f.idfactura = l.idfactura'
                 . ' WHERE f.codcliente = ' . $db->var2str(self::$codcliente)
                 . ' AND l.referencia = ' . $db->var2str($item['referencia'])
-                . ' ORDER BY f.fecha DESC, f.hora DESC, f.idfactura DESC';
+                . ' ORDER BY f.fecha DESC';
             foreach ($db->selectLimit($sql, 1) as $row) {
                 $items[$key]['ultimo_precio'] = $row['pvpunitario'];
                 continue 2;
@@ -543,19 +522,6 @@ class SalesModalHTML
             // no hay facturas, asignamos el último precio de venta
             $items[$key]['ultimo_precio'] = $item['precio'];
         }
-    }
-
-    /**
-     * Condición para que la palabra aparezca en la descripción del producto
-     * o en alguno de los valores de atributo de la variante.
-     */
-    protected static function wordFilter(string $word): string
-    {
-        $like = "LIKE '%" . $word . "%'";
-        return "(LOWER(p.descripcion) " . $like
-            . " OR EXISTS (SELECT 1 FROM atributos_valores av"
-            . " WHERE av.id IN (v.idatributovalor1, v.idatributovalor2, v.idatributovalor3, v.idatributovalor4)"
-            . " AND LOWER(av.descripcion) " . $like . "))";
     }
 
     /**

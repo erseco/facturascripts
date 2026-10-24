@@ -40,7 +40,7 @@ class WidgetDatalist extends WidgetSelect
     protected function assets(): void
     {
         $route = Tools::config('route');
-        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetDatalist.js');
+        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetDatalist.js?v=' . Tools::date());
     }
 
     /**
@@ -90,7 +90,6 @@ class WidgetDatalist extends WidgetSelect
             . ' data-fieldcode="' . $this->fieldcode . '"'
             . ' data-fieldtitle="' . $this->fieldtitle . '"'
             . ' data-fieldfilter="' . $this->fieldfilter . '"'
-            . ' data-fieldsign="' . $this->fieldSign() . '"'
             . ' data-limit="' . $this->limit . '"'
             . '/>';
 
@@ -111,12 +110,9 @@ class WidgetDatalist extends WidgetSelect
         $this->fieldtitle = $child['fieldtitle'] ?? $this->fieldcode;
         $this->limit = $child['limit'] ?? CodeModel::getlimit();
         if ($loadData && $this->source) {
-            // el límite de CodeModel es estático: lo cambiamos solo mientras cargamos los valores
-            $previousLimit = static::$codeModel::getLimit();
             static::$codeModel::setLimit($this->limit);
             $values = static::$codeModel->all($this->source, $this->fieldcode, $this->fieldtitle, false);
             $this->setValuesFromCodeModel($values, $this->translate);
-            static::$codeModel::setLimit($previousLimit);
         }
     }
 }

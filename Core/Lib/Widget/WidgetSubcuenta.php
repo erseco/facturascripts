@@ -20,7 +20,6 @@
 namespace FacturaScripts\Core\Lib\Widget;
 
 use FacturaScripts\Core\DataSrc\Ejercicios;
-use FacturaScripts\Core\DataSrc\Empresas;
 use FacturaScripts\Core\Lib\AssetManager;
 use FacturaScripts\Core\Request;
 use FacturaScripts\Core\Tools;
@@ -106,9 +105,12 @@ class WidgetSubcuenta extends WidgetText
         $list = [];
         $where = [];
 
-        // si no se especifica ejercicio, usamos el mismo que se selecciona por defecto en el filtro
+        // si no se especifica ejercicio, usamos el primero (filtrado por empresa si la conocemos)
         if (empty($codejercicio)) {
-            $codejercicio = $this->defaultExercise();
+            $ejercicios = Ejercicios::byEmpresa($this->idempresa);
+            if (!empty($ejercicios)) {
+                $codejercicio = $ejercicios[0]->codejercicio;
+            }
         }
 
         // cargamos y añadimos la subcuenta seleccionada
@@ -202,27 +204,13 @@ class WidgetSubcuenta extends WidgetText
     protected function assets(): void
     {
         $route = Tools::config('route');
-        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetSubcuenta.js');
-    }
-
-    /**
-     * Devuelve el último ejercicio de la empresa del modelo o, si no la conocemos,
-     * el de la empresa predeterminada.
-     */
-    protected function defaultExercise(): string
-    {
-        $ejercicios = Ejercicios::byEmpresa($this->idempresa ?? Empresas::default()->idempresa);
-        if (empty($ejercicios)) {
-            $ejercicios = Ejercicios::byEmpresa($this->idempresa);
-        }
-
-        return empty($ejercicios) ? '' : (string)$ejercicios[0]->codejercicio;
+        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetSubcuenta.js?v=' . Tools::date());
     }
 
     protected function renderModal(string $icon, string $label): string
     {
-        return '<div class="modal fade widget-subaccount-modal" id="modal_' . $this->id . '" data-widget-subaccount-id="'
-            . $this->id . '" tabindex="-1" aria-labelledby="modal_' . $this->id . '_label" aria-hidden="true">'
+        return '<div class="modal fade" id="modal_' . $this->id . '" tabindex="-1" aria-labelledby="modal_'
+            . $this->id . '_label" aria-hidden="true">'
             . '<div class="modal-dialog modal-xl">'
             . '<div class="modal-content">'
             . '<div class="modal-header">'
@@ -255,37 +243,18 @@ class WidgetSubcuenta extends WidgetText
     protected function renderExerciseFilter(): string
     {
         $options = [];
-        $selected = $this->defaultExercise();
+        $ejercicios = Ejercicios::byEmpresa($this->idempresa);
+        $first = true;
 
-        if (!empty($this->idempresa) || Empresas::count() <= 1) {
-            foreach (Ejercicios::byEmpresa($this->idempresa) as $item) {
-                $options[] = $this->renderExerciseOption($item, $selected);
-            }
-        } else {
-            // sin empresa conocida, agrupamos los ejercicios por empresa
-            foreach (Empresas::all() as $company) {
-                $group = [];
-                foreach (Ejercicios::byEmpresa($company->idempresa) as $item) {
-                    $group[] = $this->renderExerciseOption($item, $selected);
-                }
-
-                if (!empty($group)) {
-                    $options[] = '<optgroup label="' . $this->escapeHtml($company->nombrecorto) . '">'
-                        . implode('', $group) . '</optgroup>';
-                }
-            }
+        foreach ($ejercicios as $item) {
+            $selected = $first ? ' selected' : '';
+            $options[] = '<option value="' . $this->escapeHtml($item->codejercicio) . '"' . $selected . '>' . $this->escapeHtml($item->nombre) . '</option>';
+            $first = false;
         }
 
         return '<select class="form-select mb-2" id="modal_' . $this->id . '_ej" onchange="widgetSubaccountSearch(\'' . $this->id . '\');" required>'
             . implode('', $options)
             . '</select>';
-    }
-
-    protected function renderExerciseOption($ejercicio, string $selected): string
-    {
-        $attr = $ejercicio->codejercicio === $selected ? ' selected' : '';
-        return '<option value="' . $this->escapeHtml($ejercicio->codejercicio) . '"' . $attr . '>'
-            . $this->escapeHtml($ejercicio->nombre) . '</option>';
     }
 
     protected function renderQueryFilter(): string
@@ -318,7 +287,25 @@ class WidgetSubcuenta extends WidgetText
 
     protected function renderSubaccountList(): string
     {
-        // la lista se carga por ajax al abrir el modal
+        $items = [];
+        foreach ($this->subcuentas() as $item) {
+            $match = $this->escapeHtml($item->{$this->match});
+            $code = $this->escapeHtml($item->codsubcuenta);
+            $description = $this->escapeHtml($item->descripcion);
+            $url = $this->escapeHtml($item->url());
+            $saldoClass = $item->saldo < 0 ? ' text-danger' : '';
+            $items[] = '<tr class="clickableRow widget-subaccount-option" data-widget-subaccount-id="' . $this->id . '" data-widget-subaccount-value="' . $match . '">'
+                . '<td class="text-center">'
+                . '<a href="' . $url . '" target="_blank" class="widget-subaccount-link">'
+                . '<i class="fa-solid fa-external-link-alt fa-fw"></i>'
+                . '</a>'
+                . '</td>'
+                . '<td><b>' . $code . '</b></td>'
+                . '<td>' . $description . '</td>'
+                . '<td class="text-end' . $saldoClass . '">' . Tools::number($item->saldo) . '</td>'
+                . '</tr>';
+        }
+
         return '<div class="table-responsive">'
             . '<table class="table table-hover mb-0">'
             . '<thead>'
@@ -329,7 +316,7 @@ class WidgetSubcuenta extends WidgetText
             . '<th class="text-end">' . Tools::trans('balance') . '</th>'
             . '</tr>'
             . '</thead>'
-            . '<tbody id="list_' . $this->id . '"></tbody>'
+            . '<tbody id="list_' . $this->id . '">' . implode('', $items) . '</tbody>'
             . '</table>'
             . '</div>';
     }

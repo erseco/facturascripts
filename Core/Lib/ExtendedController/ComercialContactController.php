@@ -197,7 +197,6 @@ abstract class ComercialContactController extends EditController
             return true;
         }
 
-        $this->assertOwnerData($model);
         if ($model->checkVies()) {
             Tools::log()->notice('vies-check-success', ['%vat-number%' => $model->cifnif]);
         }

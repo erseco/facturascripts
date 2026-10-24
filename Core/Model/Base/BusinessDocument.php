@@ -1,7 +1,7 @@
 <?php
 /**
  * This file is part of FacturaScripts
- * Copyright (C) 2013-2026 Carlos Garcia Gomez <carlos@facturascripts.com>
+ * Copyright (C) 2013-2025 Carlos Garcia Gomez <carlos@facturascripts.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as
@@ -21,7 +21,6 @@ namespace FacturaScripts\Core\Model\Base;
 
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\DataSrc\Almacenes;
-use FacturaScripts\Core\DataSrc\Retenciones;
 use FacturaScripts\Core\Model\LogMessage;
 use FacturaScripts\Core\Template\ModelClass as NewModelClass;
 use FacturaScripts\Core\Tools;
@@ -31,7 +30,6 @@ use FacturaScripts\Dinamic\Model\AttachedFileRelation;
 use FacturaScripts\Dinamic\Model\Divisa;
 use FacturaScripts\Dinamic\Model\Ejercicio;
 use FacturaScripts\Dinamic\Model\FormaPago;
-use FacturaScripts\Dinamic\Model\Retencion;
 use FacturaScripts\Dinamic\Model\Serie;
 use FacturaScripts\Dinamic\Model\User;
 
@@ -313,40 +311,6 @@ abstract class BusinessDocument extends NewModelClass
     }
 
     /**
-     * Devuelve la retención que corresponde a un porcentaje de IRPF del documento:
-     * la del cliente/proveedor o la predeterminada si su porcentaje coincide;
-     * en otro caso, la primera retención con ese porcentaje.
-     *
-     * @param float $percentage
-     *
-     * @return Retencion|null
-     */
-    public function getRetentionFromPercentage(float $percentage): ?Retencion
-    {
-        if (empty($percentage)) {
-            return null;
-        }
-
-        $codes = [
-            $this->getSubject()->codretencion,
-            Tools::settings('default', 'codretencion'),
-        ];
-        foreach ($codes as $code) {
-            if (empty($code)) {
-                continue;
-            }
-
-            $retention = Retenciones::get($code);
-            if ($retention->exists() && Tools::floatCmp($retention->porcentaje, $percentage, 4, true)) {
-                return $retention;
-            }
-        }
-
-        $retention = new Retencion();
-        return $retention->loadFromPercentage($percentage) ? $retention : null;
-    }
-
-    /**
      * Devuelve el descuento total de todo el documento.
      * Este cálculo tiene en cuenta tanto los descuentos globales aplicados al documento
      * como los descuentos individuales aplicados en cada una de las líneas.
@@ -501,9 +465,7 @@ abstract class BusinessDocument extends NewModelClass
 
         // comprobamos el ejercicio y la fecha
         if ((empty($this->id()) || !$this->isDirty('fecha')) && false === $this->getExercise()->inRange($this->fecha)) {
-            Tools::log()->error('date-out-of-exercise-range', [
-                '%exerciseName%' => $this->getExercise()->nombre ?? $this->codejercicio
-            ]);
+            Tools::log()->error('date-out-of-exercise-range', ['%exerciseName%' => $this->codejercicio]);
             return false;
         }
 

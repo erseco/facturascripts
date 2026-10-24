@@ -19,7 +19,6 @@
 
 namespace FacturaScripts\Core\Controller;
 
-use Closure;
 use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Contract\ControllerInterface;
 use FacturaScripts\Core\DataSrc\Empresas;
@@ -39,9 +38,7 @@ use FacturaScripts\Dinamic\Model\User;
  *
  * Incluye la proteccion contra fuerza bruta basada en listas por IP y por usuario en cache,
  * con un umbral de MAX_INCIDENT_COUNT incidentes en una ventana de INCIDENT_EXPIRATION_TIME
- * segundos. Cada intento se reserva como incidente antes de verificar las credenciales, bajo un
- * bloqueo exclusivo, y se libera si son correctas: así las peticiones simultáneas no pueden
- * superar el umbral. El flujo de 2FA exige un nonce escrito por loginAction tras validar la contrasena,
+ * segundos. El flujo de 2FA exige un nonce escrito por loginAction tras validar la contrasena,
  * para evitar que el endpoint de validacion del codigo se use como puerta trasera sin password.
  */
 class Login implements ControllerInterface
@@ -74,10 +71,8 @@ class Login implements ControllerInterface
 
     public function clearIncidents(): void
     {
-        $this->withIncidentsLock(function () {
-            Cache::delete(self::IP_LIST);
-            Cache::delete(self::USER_LIST);
-        });
+        Cache::delete(self::IP_LIST);
+        Cache::delete(self::USER_LIST);
     }
 
     public function getPageData(): array
@@ -85,48 +80,10 @@ class Login implements ControllerInterface
         return [];
     }
 
-    /**
-     * Libera un intento reservado con reserveAttempt() cuando las credenciales son correctas,
-     * para que los accesos legítimos no cuenten como incidentes.
-     */
-    public function releaseAttempt(string $id): void
-    {
-        // los incidentes sin reserva no tienen identificador
-        if ('' === $id) {
-            return;
-        }
-
-        $this->withIncidentsLock(function () use ($id) {
-            $filter = fn(array $item) => ($item['id'] ?? '') !== $id;
-            Cache::set(self::IP_LIST, array_values(array_filter($this->getIpList(), $filter)));
-            Cache::set(self::USER_LIST, array_values(array_filter($this->getUserList(), $filter)));
-        });
-    }
-
-    /**
-     * Comprueba el umbral de incidentes y registra el intento como incidente en una sola operación
-     * bloqueada, antes de verificar las credenciales, para que los intentos en curso también cuenten.
-     * Devuelve el identificador del intento, o null si la IP o el usuario están bloqueados.
-     */
-    public function reserveAttempt(string $ip, string $user = ''): ?string
-    {
-        return $this->withIncidentsLock(function () use ($ip, $user) {
-            if ($this->userHasManyIncidents($ip, $user)) {
-                return null;
-            }
-
-            $id = bin2hex(random_bytes(8));
-            $this->addIncident($ip, $user, time(), $id);
-            return $id;
-        });
-    }
-
     public function run(): void
     {
         $this->empresa = Empresas::default();
-
-        // hasta completar el asistente (que guarda la página de inicio) la empresa tiene un nombre provisional
-        $this->title = Tools::settings('default', 'homepage') ? $this->empresa->nombrecorto : 'FacturaScripts';
+        $this->title = $this->empresa->nombrecorto;
 
         $request = Request::createFromGlobals();
         $action = $request->inputOrQuery('action', '');
@@ -159,9 +116,30 @@ class Login implements ControllerInterface
 
     public function saveIncident(string $ip, string $user = '', ?int $time = null): void
     {
-        $this->withIncidentsLock(function () use ($ip, $user, $time) {
-            $this->addIncident($ip, $user, $time ?? time());
-        });
+        // anadimos la IP actual a la lista
+        $ipList = $this->getIpList();
+        $ipList[] = [
+            'ip' => $ip,
+            'time' => ($time ?? time())
+        ];
+
+        // guardamos la lista en cache
+        Cache::set(self::IP_LIST, $ipList);
+
+        // si el usuario esta vacio (incidente solo por IP), no tocamos la lista de usuarios
+        if (empty($user)) {
+            return;
+        }
+
+        // anadimos el usuario actual a la lista
+        $userList = $this->getUserList();
+        $userList[] = [
+            'user' => $user,
+            'time' => ($time ?? time())
+        ];
+
+        // guardamos la lista en cache
+        Cache::set(self::USER_LIST, $userList);
     }
 
     public function userHasManyIncidents(string $ip, string $username = ''): bool
@@ -193,22 +171,18 @@ class Login implements ControllerInterface
             return;
         }
 
-        // reservamos el intento antes de comprobar la contraseña de la base de datos
         $username = $request->input('fsNewUserPasswd');
-        $attempt = $this->reserveAttempt(Session::getClientIp(), $username);
-        if (null === $attempt) {
+        if ($this->userHasManyIncidents(Session::getClientIp(), $username)) {
             Tools::log()->warning('ip-banned');
             return;
         }
 
-        // si la contraseña no es correcta, el intento reservado queda como incidente
         $dbPassword = $request->input('fsDbPasswd');
         if ($dbPassword !== Tools::config('db_pass')) {
             Tools::log()->warning('login-invalid-db-password');
+            $this->saveIncident(Session::getClientIp(), $username);
             return;
         }
-
-        $this->releaseAttempt($attempt);
 
         $password = $request->input('fsNewPasswd');
         $password2 = $request->input('fsNewPasswd2');
@@ -250,47 +224,12 @@ class Login implements ControllerInterface
 
     protected function validateFormToken(Request $request): bool
     {
-        // los formularios de esta página se generan sin sesión, así que su token no lleva el nick,
-        // aunque el navegador conserve la cookie fsNick de una sesión anterior
-        return $this->checkFormToken($request, '');
-    }
-
-    private function addIncident(string $ip, string $user, int $time, string $id = ''): void
-    {
-        // anadimos la IP actual a la lista
-        $ipList = $this->getIpList();
-        $ipList[] = [
-            'id' => $id,
-            'ip' => $ip,
-            'time' => $time
-        ];
-
-        // guardamos la lista en cache
-        Cache::set(self::IP_LIST, $ipList);
-
-        // si el usuario esta vacio (incidente solo por IP), no tocamos la lista de usuarios
-        if (empty($user)) {
-            return;
-        }
-
-        // anadimos el usuario actual a la lista
-        $userList = $this->getUserList();
-        $userList[] = [
-            'id' => $id,
-            'user' => $user,
-            'time' => $time
-        ];
-
-        // guardamos la lista en cache
-        Cache::set(self::USER_LIST, $userList);
-    }
-
-    private function checkFormToken(Request $request, string $seed): bool
-    {
         $multiRequestProtection = new MultiRequestProtection();
-        $multiRequestProtection->clearSeed();
-        if ($seed) {
-            $multiRequestProtection->addSeed($seed);
+
+        // si el usuario está autenticado, añadimos su nick a la semilla
+        $cookieNick = $request->cookie('fsNick', '');
+        if ($cookieNick) {
+            $multiRequestProtection->addSeed($cookieNick);
         }
 
         // comprobamos el token
@@ -356,30 +295,27 @@ class Login implements ControllerInterface
             return;
         }
 
-        // reservamos el intento antes de verificar la contraseña;
         // si la IP o el usuario acumulan demasiados incidentes recientes, bloqueamos
-        $attempt = $this->reserveAttempt(Session::getClientIp(), $userName);
-        if (null === $attempt) {
+        if ($this->userHasManyIncidents(Session::getClientIp(), $userName)) {
             Tools::log()->warning('ip-banned');
             return;
         }
 
-        // en los fallos, el intento reservado queda como incidente
         $user = new User();
         if (false === $user->load($userName)) {
             // ejecutamos un password_verify falso para igualar tiempos
             // y evitar enumeración de usuarios por timing
             password_verify($password, self::DUMMY_PASSWORD_HASH);
             Tools::log()->warning('login-password-fail');
+            $this->saveIncident(Session::getClientIp(), $userName);
             return;
         }
 
         if (false === $user->enabled || false === $user->verifyPassword($password)) {
             Tools::log()->warning('login-password-fail');
+            $this->saveIncident(Session::getClientIp(), $userName);
             return;
         }
-
-        $this->releaseAttempt($attempt);
 
         if ($user->two_factor_enabled) {
             Cache::set($this->twoFactorPendingKey(Session::getClientIp(), $user->nick), time());
@@ -405,19 +341,18 @@ class Login implements ControllerInterface
         $userName = $request->input('fsNick');
         $ip = Session::getClientIp();
 
-        // rate-limit antes de hacer cualquier trabajo: reservamos el intento
-        $attempt = $this->reserveAttempt($ip, $userName);
-        if (null === $attempt) {
+        // rate-limit antes de hacer cualquier trabajo
+        if ($this->userHasManyIncidents($ip, $userName)) {
             Tools::log()->warning('ip-banned');
             return;
         }
 
-        // exigimos que loginAction se haya completado con éxito recientemente;
-        // en los fallos, el intento reservado queda como incidente
+        // exigimos que loginAction se haya completado con éxito recientemente
         $pendingKey = $this->twoFactorPendingKey($ip, $userName);
         $pendingAt = Cache::get($pendingKey);
         if (!is_int($pendingAt) || time() - $pendingAt > self::TWO_FACTOR_PENDING_TTL) {
             Tools::log()->warning('login-password-fail');
+            $this->saveIncident($ip, $userName);
             return;
         }
 
@@ -427,12 +362,12 @@ class Login implements ControllerInterface
             || !$user->verifyTwoFactorCode($request->input('fsTwoFactorCode'))
         ) {
             Tools::log()->warning('two-factor-code-invalid');
+            $this->saveIncident($ip, $userName);
             return;
         }
 
         // consumimos el nonce: un único intento exitoso por password-step
         Cache::delete($pendingKey);
-        $this->releaseAttempt($attempt);
 
         $this->updateUserAndRedirect($user, $ip, $request);
     }
@@ -457,8 +392,7 @@ class Login implements ControllerInterface
 
     protected function logoutAction(Request $request): void
     {
-        // el enlace de cerrar sesión se genera en páginas con sesión, cuyo token lleva el nick
-        if (false === $this->checkFormToken($request, $request->cookie('fsNick', ''))) {
+        if (false === $this->validateFormToken($request)) {
             return;
         }
 
@@ -512,36 +446,5 @@ class Login implements ControllerInterface
         setcookie('fsNick', $user->nick, $options);
         setcookie('fsLogkey', $user->logkey, $options);
         setcookie('fsLang', $user->langcode, $options);
-    }
-
-    /**
-     * Ejecuta $callback con un bloqueo exclusivo sobre las listas de incidentes, para que la lectura,
-     * la comprobación y la escritura de las peticiones simultáneas no se mezclen.
-     *
-     * @return mixed
-     */
-    private function withIncidentsLock(Closure $callback)
-    {
-        $folder = Tools::folder('MyFiles', 'Tmp');
-        Tools::folderCheckOrCreate($folder);
-
-        // creamos el fichero de bloqueo con permisos de escritura para otros procesos (CLI, etc.)
-        $lockFile = $folder . DIRECTORY_SEPARATOR . 'login-incidents.lock';
-        $exists = file_exists($lockFile);
-        $handle = fopen($lockFile, 'c');
-        if (false === $handle) {
-            return $callback();
-        }
-        if (false === $exists) {
-            chmod($lockFile, 0666);
-        }
-
-        flock($handle, LOCK_EX);
-        try {
-            return $callback();
-        } finally {
-            flock($handle, LOCK_UN);
-            fclose($handle);
-        }
     }
 }

@@ -47,6 +47,7 @@ use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\ReciboCliente;
 use FacturaScripts\Dinamic\Model\ReciboProveedor;
 use FacturaScripts\Dinamic\Model\WorkEvent;
+use ParseCsv\Csv;
 
 /**
  * Controlador que ejecuta las tareas programadas (cron) del núcleo y de los plugins.
@@ -211,7 +212,8 @@ END;
         }
 
         // leemos el CSV y restauramos solo las que faltan
-        $csv = CSVImport::readFile($filePath);
+        $csv = new Csv();
+        $csv->auto($filePath);
 
         $restored = 0;
         foreach ($csv->data as $row) {

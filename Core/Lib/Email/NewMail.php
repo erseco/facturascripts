@@ -241,9 +241,7 @@ class NewMail
     {
         $names = [];
         foreach ($this->mail->getAttachments() as $attach) {
-            // el índice 1 es el nombre del archivo en disco (puede llevar un sufijo temporal),
-            // el índice 2 es el nombre con el que se muestra el adjunto en el email
-            $names[] = empty($attach[2]) ? $attach[1] : $attach[2];
+            $names[] = $attach[1];
         }
 
         return $names;
@@ -749,10 +747,7 @@ class NewMail
 
             // el adjunto puede estar en la carpeta temporal con un nombre de disco
             // distinto al visible, para evitar colisiones entre subidas simultáneas
-            // comprobamos la ruta real para que un ../ no permita mover archivos de fuera
-            $realPath = realpath($attach[0]);
-            $tmpFolder = realpath(FS_FOLDER . '/' . static::ATTACHMENTS_TMP_PATH);
-            if ($realPath && $tmpFolder && str_starts_with($realPath, $tmpFolder . DIRECTORY_SEPARATOR)) {
+            if (str_starts_with($attach[0], FS_FOLDER . '/' . static::ATTACHMENTS_TMP_PATH) && file_exists($attach[0])) {
                 rename($attach[0], $newPath);
                 continue;
             }

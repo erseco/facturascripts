@@ -18,12 +18,8 @@
  */
 
 const FS_RESTORE_ARCHIVE = 'CORE.zip';
-const FS_RESTORE_MIN_PHP = '7.3.0';
 const FS_RESTORE_PACKAGE_FOLDER = 'facturascripts';
 const FS_RESTORE_URL = 'https://facturascripts.com/DownloadBuild/1/stable';
-
-// increment it on every change: a restoration keeps this script if the package has an older one
-const FS_RESTORE_VERSION = 1;
 
 function restoreMessage(string $message, bool $error = false): void
 {
@@ -42,7 +38,7 @@ function restoreMessage(string $message, bool $error = false): void
         . '</p>';
 
     if (!$error) {
-        echo '<p><a href="./deploy">Click here to continue</a>.</p>';
+        echo '<p><a href="./">Click here to continue</a>.</p>';
     }
 
     echo '</body></html>';
@@ -94,8 +90,7 @@ function restoreDownloadArchive(string $archivePath): void
         throw new RuntimeException('Unable to create the temporary download file.');
     }
 
-    // the server returns the latest stable version compatible with this PHP version
-    $curl = curl_init(FS_RESTORE_URL . '?php=' . rawurlencode(PHP_VERSION));
+    $curl = curl_init(FS_RESTORE_URL);
     if (false === $curl) {
         fclose($stream);
         restoreDeletePath($tempPath);
@@ -115,6 +110,7 @@ function restoreDownloadArchive(string $archivePath): void
     ]);
 
     if (!$configured) {
+        curl_close($curl);
         fclose($stream);
         restoreDeletePath($tempPath);
         throw new RuntimeException('Unable to configure the download.');
@@ -123,12 +119,8 @@ function restoreDownloadArchive(string $archivePath): void
     $downloaded = curl_exec($curl);
     $error = curl_error($curl);
     $status = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    curl_close($curl);
     fclose($stream);
-
-    if (404 === $status) {
-        restoreDeletePath($tempPath);
-        throw new RuntimeException('There is no stable version compatible with PHP ' . PHP_VERSION . '.');
-    }
 
     $fileSize = filesize($tempPath);
     if (false === $downloaded || $status < 200 || $status >= 300 || false === $fileSize || $fileSize === 0) {
@@ -173,7 +165,7 @@ function restoreValidateArchive(ZipArchive $zip): void
             throw new RuntimeException('CORE.zip contains files outside the expected package folder.');
         }
 
-        if (in_array('..', $parts, true) || strpos($normalized, '/') === 0) {
+        if (in_array('..', $parts, true) || str_starts_with($normalized, '/')) {
             throw new RuntimeException('CORE.zip contains an unsafe path.');
         }
 
@@ -227,40 +219,6 @@ function restoreRollback(string $backupPath, array $states): array
     return $errors;
 }
 
-/**
- * Returns the FS_RESTORE_VERSION of a restoration script. Scripts without it are older than this check.
- */
-function restoreScriptVersion(string $content): int
-{
-    return preg_match('/^const FS_RESTORE_VERSION = (\d+);/m', $content, $matches) ? (int)$matches[1] : 0;
-}
-
-/**
- * Keeps the running restoration script when the package has an older one (old core versions are
- * downloaded for old PHP versions), so the next restoration still works.
- */
-function restorePrepareScript(string $packagePath, string $runningScript): void
-{
-    $packageScript = $packagePath . DIRECTORY_SEPARATOR . 'replace_index_to_restore.php';
-    $packageContent = @file_get_contents($packageScript);
-    $runningContent = @file_get_contents($runningScript);
-    if (false === $packageContent || false === $runningContent) {
-        throw new RuntimeException('Unable to read the restoration script.');
-    }
-
-    $keepRunning = restoreScriptVersion($packageContent) < restoreScriptVersion($runningContent);
-    if ($keepRunning && false === @file_put_contents($packageScript, $runningContent)) {
-        throw new RuntimeException('Unable to keep the current restoration script.');
-    }
-
-    // opcache only compares the modification time: if this file had the same as index.php,
-    // after renaming it the cached index.php would still be executed
-    $indexTime = filemtime($packagePath . DIRECTORY_SEPARATOR . 'index.php');
-    if (false === $indexTime || !@touch($packageScript, $indexTime - 60)) {
-        throw new RuntimeException('Unable to set the restoration script modification time.');
-    }
-}
-
 function restoreInstallPackage(string $packagePath, string $backupPath): void
 {
     if (!@mkdir($backupPath, 0755, true)) {
@@ -303,30 +261,13 @@ function restoreInstallPackage(string $packagePath, string $backupPath): void
     }
 }
 
-/**
- * @param resource $lock
- */
-function restoreReleaseLock($lock, string $lockPath): void
-{
-    // remove the file while it is still locked, so no other process can lock it in between
-    @unlink($lockPath);
-    flock($lock, LOCK_UN);
-    fclose($lock);
-}
-
-// the tests only load the functions
-if (defined('FS_RESTORE_SKIP_RUN')) {
-    return;
-}
-
 // This file must replace index.php before it can perform a restoration.
 if (basename(__FILE__) !== 'index.php') {
     restoreMessage('Remove index.php and rename this file to index.php.', true);
 }
 
-// this script must also run on old PHP versions, to restore the latest version compatible with them
-if (version_compare(PHP_VERSION, FS_RESTORE_MIN_PHP) < 0) {
-    restoreMessage('FacturaScripts restoration requires PHP ' . FS_RESTORE_MIN_PHP . ' or newer.', true);
+if (version_compare(PHP_VERSION, '8.1.0') < 0) {
+    restoreMessage('FacturaScripts requires PHP 8.1.0 or newer.', true);
 }
 
 if (!class_exists('ZipArchive')) {
@@ -351,24 +292,10 @@ if (!flock($lock, LOCK_EX | LOCK_NB)) {
     restoreMessage('Another restoration process is already running. Try again in a few minutes.', true);
 }
 
-// if another process finished and removed the lock file after we opened it, our lock is no longer valid
-// (some systems, like Windows, do not report the inode of an open file, so it is only compared when available)
-clearstatcache(true, $lockPath);
-$lockInfo = fstat($lock);
-$currentLockInfo = @stat($lockPath);
-$lockReplaced = false === $currentLockInfo || (!empty($lockInfo['ino'])
-        && ($lockInfo['dev'] !== $currentLockInfo['dev'] || $lockInfo['ino'] !== $currentLockInfo['ino']));
-if ($lockReplaced) {
-    flock($lock, LOCK_UN);
-    fclose($lock);
-    restoreMessage('Another restoration process has just finished. Reload this page to check the result.', true);
-}
-
 $archivePath = __DIR__ . DIRECTORY_SEPARATOR . FS_RESTORE_ARCHIVE;
 $token = bin2hex(random_bytes(8));
 $stagingPath = __DIR__ . DIRECTORY_SEPARATOR . 'restore-staging-' . $token;
 $backupPath = __DIR__ . DIRECTORY_SEPARATOR . 'restore-backup-' . $token;
-$rejectArchive = false;
 
 try {
     if (restorePathExists($archivePath)) {
@@ -386,8 +313,6 @@ try {
         restoreDownloadArchive($archivePath);
     }
 
-    // if the archive is not a valid package, remove it so the next attempt downloads it again
-    $rejectArchive = true;
     $zip = new ZipArchive();
     $zipStatus = $zip->open($archivePath, ZipArchive::CHECKCONS);
     if (true !== $zipStatus) {
@@ -414,22 +339,12 @@ try {
 
     $packagePath = $stagingPath . DIRECTORY_SEPARATOR . FS_RESTORE_PACKAGE_FOLDER;
     restoreValidatePackage($packagePath);
-    $rejectArchive = false;
-
-    restorePrepareScript($packagePath, __FILE__);
-
     restoreInstallPackage($packagePath, $backupPath);
 } catch (Throwable $exception) {
-    $message = $exception->getMessage();
     restoreDeletePath($stagingPath);
-    if ($rejectArchive) {
-        $message .= restoreDeletePath($archivePath) ?
-            ' CORE.zip has been removed. Reload this page to download it again.' :
-            ' CORE.zip could not be removed. Delete it and reload this page to download it again.';
-    }
-
-    restoreReleaseLock($lock, $lockPath);
-    restoreMessage($message, true);
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    restoreMessage($exception->getMessage(), true);
 }
 
 $warnings = [];
@@ -443,28 +358,10 @@ if (!restoreDeletePath($archivePath)) {
     $warnings[] = 'CORE.zip could not be removed.';
 }
 
-// remove the classes generated with the previous core, so the deploy page rebuilds them
-if (!restoreDeletePath(__DIR__ . DIRECTORY_SEPARATOR . 'Dinamic')) {
-    $warnings[] = 'The Dinamic folder could not be removed. Delete it before continuing.';
-}
-if (!restoreDeletePath(__DIR__ . DIRECTORY_SEPARATOR . 'MyFiles' . DIRECTORY_SEPARATOR . 'Cache')) {
-    $warnings[] = 'The MyFiles/Cache folder could not be removed.';
-}
+flock($lock, LOCK_UN);
+fclose($lock);
 
-// the data cache may contain table columns and objects from the previous core
-$fileCachePath = __DIR__ . DIRECTORY_SEPARATOR . 'MyFiles' . DIRECTORY_SEPARATOR . 'Tmp' . DIRECTORY_SEPARATOR . 'FileCache';
-if (!restoreDeletePath($fileCachePath)) {
-    $warnings[] = 'The MyFiles/Tmp/FileCache folder could not be removed.';
-}
-
-// the saved routes point to the removed Dinamic classes, the deploy page saves them again
-if (!restoreDeletePath(__DIR__ . DIRECTORY_SEPARATOR . 'MyFiles' . DIRECTORY_SEPARATOR . 'routes.json')) {
-    $warnings[] = 'The MyFiles/routes.json file could not be removed. Delete it before continuing.';
-}
-
-restoreReleaseLock($lock, $lockPath);
-
-$message = 'The latest stable version compatible with PHP ' . PHP_VERSION . ' has been installed.';
+$message = 'The latest stable version has been installed.';
 if (!empty($warnings)) {
     $message .= ' Cleanup warnings: ' . implode(' ', $warnings);
 }

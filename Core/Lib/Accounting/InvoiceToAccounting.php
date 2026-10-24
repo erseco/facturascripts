@@ -20,7 +20,6 @@
 namespace FacturaScripts\Core\Lib\Accounting;
 
 use FacturaScripts\Core\DataSrc\Impuestos;
-use FacturaScripts\Core\DataSrc\Retenciones;
 use FacturaScripts\Core\Lib\Calculator;
 use FacturaScripts\Core\Lib\InvoiceOperation;
 use FacturaScripts\Core\Tools;
@@ -30,7 +29,6 @@ use FacturaScripts\Dinamic\Model\Cliente;
 use FacturaScripts\Dinamic\Model\Cuenta;
 use FacturaScripts\Dinamic\Model\FacturaCliente;
 use FacturaScripts\Dinamic\Model\FacturaProveedor;
-use FacturaScripts\Dinamic\Model\Familia;
 use FacturaScripts\Dinamic\Model\Join\PurchasesDocIrpfAccount;
 use FacturaScripts\Dinamic\Model\Join\PurchasesDocLineAccount;
 use FacturaScripts\Dinamic\Model\Join\SalesDocLineAccount;
@@ -191,9 +189,6 @@ class InvoiceToAccounting extends AccountingClass
     }
 
     /**
-     * Añade las líneas de retención de IRPF de compras al asiento. Cada línea de la factura
-     * usa la subcuenta de IRPF de su producto o familia o, en su defecto, la de su retención.
-     *
      * @param Asiento $entry
      *
      * @return bool
@@ -204,51 +199,23 @@ class InvoiceToAccounting extends AccountingClass
             return true;
         }
 
-        $where = [
-            Where::eq('lineasfacturasprov.idfactura', $this->document->idfactura),
-            Where::eq('lineasfacturasprov.suplido', false),
-            Where::notEq('lineasfacturasprov.irpf', 0),
-        ];
-        $rows = PurchasesDocIrpfAccount::all($where);
-        if (empty($rows)) {
-            // el IRPF no viene de las líneas (lo ha calculado un mod), así que usamos el del documento
-            $rows = [new PurchasesDocIrpfAccount([
-                'codfamilia' => '',
-                'codretencion' => null,
-                'codsubcuenta' => '',
-                'irpf' => $this->subtotals['irpf'],
-                'total' => 0.0,
-            ])];
+        $retention = new Retencion();
+        if (false === $retention->loadFromPercentage($this->subtotals['irpf'])) {
+            Tools::log()->warning('irpf-record-not-found', ['%value%' => $this->subtotals['irpf']]);
+            return false;
         }
 
-        $totals = [];
-        foreach ($rows as $row) {
-            $retention = $this->getRetention($row->codretencion, (float)$row->irpf);
-            if (null === $retention) {
-                Tools::log()->warning('irpf-record-not-found', ['%value%' => $row->irpf]);
-                return false;
-            }
-
-            $account = $this->getIRPFPurchaseAccount($retention);
-            if (false === $account->exists()) {
-                Tools::log()->warning('irpfpr-subaccount-not-found', [
-                    '%subaccount%' => $retention->codsubcuentaacr,
-                    '%exercise%' => $this->exercise->codejercicio
-                ]);
-                return false;
-            }
-
-            // subcuenta de IRPF del producto, de la familia o de la retención
-            $codSubAccount = empty($row->codsubcuenta) ? Familia::purchaseIrpfSubAccount($row->codfamilia) : $row->codsubcuenta;
-            if (empty($codSubAccount)) {
-                $codSubAccount = $account->codsubcuenta;
-            }
-
-            $amount = $row->total * $this->document->getEUDiscount() * $row->irpf / 100;
-            $totals[$codSubAccount] = ($totals[$codSubAccount] ?? 0.0) + $amount;
+        $account = $this->getIRPFPurchaseAccount($retention);
+        if (false === $account->exists()) {
+            Tools::log()->warning('irpfpr-subaccount-not-found', [
+                '%subaccount%' => $retention->codsubcuentaacr,
+                '%exercise%' => $this->exercise->codejercicio
+            ]);
+            return false;
         }
 
-        $totals = $this->roundTotals($totals, $this->document->totalirpf);
+        $tool = new PurchasesDocIrpfAccount();
+        $totals = $tool->getTotalsForDocument($this->document, $account->codsubcuenta ?? '', $this->subtotals['irpf']);
         return $this->addLinesFromTotals(
             $entry,
             $totals,
@@ -357,9 +324,6 @@ class InvoiceToAccounting extends AccountingClass
     }
 
     /**
-     * Añade las líneas de retención de IRPF de ventas al asiento, una por cada subcuenta
-     * de las retenciones del documento.
-     *
      * @param Asiento $entry
      *
      * @return bool
@@ -370,47 +334,24 @@ class InvoiceToAccounting extends AccountingClass
             return true;
         }
 
-        $retentions = $this->subtotals['retenciones'] ?? [];
-        if (empty($retentions)) {
-            // el IRPF no viene desglosado (lo ha calculado un mod), así que usamos el del documento
-            $retentions = [[
-                'codretencion' => null,
-                'irpf' => $this->subtotals['irpf'],
-                'totalirpf' => $this->subtotals['totalirpf'],
-            ]];
+        $retention = new Retencion();
+        if (false === $retention->loadFromPercentage($this->subtotals['irpf'])) {
+            Tools::log()->warning('irpf-record-not-found', ['%value%' => $this->subtotals['irpf']]);
+            return false;
         }
 
-        $accounts = [];
-        $totals = [];
-        foreach ($retentions as $item) {
-            $retention = $this->getRetention($item['codretencion'], (float)$item['irpf']);
-            if (null === $retention) {
-                Tools::log()->warning('irpf-record-not-found', ['%value%' => $item['irpf']]);
-                return false;
-            }
-
-            $account = $this->getIRPFSalesAccount($retention);
-            if (false === $account->exists()) {
-                Tools::log()->warning('irpf-subaccount-not-found', [
-                    '%subaccount%' => $retention->codsubcuentaret,
-                    '%exercise%' => $this->exercise->codejercicio
-                ]);
-                return false;
-            }
-
-            $accounts[$account->codsubcuenta] = $account;
-            $totals[$account->codsubcuenta] = ($totals[$account->codsubcuenta] ?? 0.0) + $item['totalirpf'];
+        $account = $this->getIRPFSalesAccount($retention);
+        if (false === $account->exists()) {
+            Tools::log()->warning('irpf-subaccount-not-found', [
+                '%subaccount%' => $retention->codsubcuentaret,
+                '%exercise%' => $this->exercise->codejercicio
+            ]);
+            return false;
         }
 
-        foreach ($totals as $code => $total) {
-            $newLine = $this->getBasicLine($entry, $accounts[$code], true, $total);
-            $newLine->setCounterpart($this->counterpart);
-            if (false === $newLine->save()) {
-                return false;
-            }
-        }
-
-        return true;
+        $newLine = $this->getBasicLine($entry, $account, true, $this->subtotals['totalirpf']);
+        $newLine->setCounterpart($this->counterpart);
+        return $newLine->save();
     }
 
     /**
@@ -539,27 +480,6 @@ class InvoiceToAccounting extends AccountingClass
     }
 
     /**
-     * Devuelve la retención a contabilizar: la indicada en la línea o, si no tiene
-     * (líneas anteriores a guardar la retención), la que corresponde a su porcentaje.
-     *
-     * @param string|null $codretencion
-     * @param float $percentage
-     *
-     * @return Retencion|null
-     */
-    protected function getRetention(?string $codretencion, float $percentage): ?Retencion
-    {
-        if (false === empty($codretencion)) {
-            $retention = Retenciones::get($codretencion);
-            if ($retention->exists()) {
-                return $retention;
-            }
-        }
-
-        return $this->document->getRetentionFromPercentage($percentage);
-    }
-
-    /**
      * Comprobaciones previas a la contabilización: el documento no está ya contabilizado,
      * tiene total, el ejercicio existe y está abierto, tiene plan contable, los subtotales
      * se calculan correctamente y hay cuentas dadas de alta en ese ejercicio.
@@ -579,9 +499,7 @@ class InvoiceToAccounting extends AccountingClass
         }
 
         if (false === $this->exercise->load($this->document->codejercicio) || false === $this->exercise->isOpened()) {
-            Tools::log()->warning('closed-exercise', [
-                '%exerciseName%' => $this->exercise->nombre ?? $this->document->codejercicio
-            ]);
+            Tools::log()->warning('closed-exercise', ['%exerciseName%' => $this->document->codejercicio]);
             return false;
         }
 
@@ -597,7 +515,7 @@ class InvoiceToAccounting extends AccountingClass
 
         $where = [Where::eq('codejercicio', $this->document->codejercicio)];
         if (0 === Cuenta::count($where)) {
-            Tools::log()->warning('accounting-data-missing', ['%exerciseName%' => $this->exercise->nombre]);
+            Tools::log()->warning('accounting-data-missing', ['%exerciseName%' => $this->document->codejercicio]);
             return false;
         }
 
@@ -677,36 +595,6 @@ class InvoiceToAccounting extends AccountingClass
         }
 
         $this->document->idasiento = $entry->id();
-    }
-
-    /**
-     * Redondea los importes por subcuenta y ajusta los céntimos de diferencia en el mayor,
-     * para que la suma coincida con el total indicado.
-     *
-     * @param array $totals
-     * @param float $total
-     *
-     * @return array
-     */
-    protected function roundTotals(array $totals, float $total): array
-    {
-        $sum = 0.0;
-        $maxKey = null;
-        foreach ($totals as $key => $value) {
-            $totals[$key] = Tools::round($value);
-            $sum += $totals[$key];
-
-            if (null === $maxKey || abs($totals[$key]) > abs($totals[$maxKey])) {
-                $maxKey = $key;
-            }
-        }
-
-        $diff = Tools::round($total - $sum);
-        if (null !== $maxKey && false === empty($diff)) {
-            $totals[$maxKey] = Tools::round($totals[$maxKey] + $diff);
-        }
-
-        return $totals;
     }
 
     /**

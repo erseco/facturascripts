@@ -148,11 +148,7 @@ class Asiento extends ModelClass
         $reg = new DinRegularizacionImpuesto();
         $reg->idempresa = $this->idempresa;
         if ($reg->loadFechaInside($this->fecha) && $reg->bloquear) {
-            Tools::log()->warning('accounting-within-regularization', [
-                '%period%' => $reg->periodo,
-                '%startDate%' => $reg->fechainicio,
-                '%endDate%' => $reg->fechafin
-            ]);
+            Tools::log()->warning('accounting-within-regularization');
             return false;
         }
 

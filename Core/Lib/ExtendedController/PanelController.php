@@ -20,11 +20,8 @@
 namespace FacturaScripts\Core\Lib\ExtendedController;
 
 use FacturaScripts\Core\Base\ControllerPermissions;
-use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Response;
 use FacturaScripts\Core\Tools;
-use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Model\Producto;
 use FacturaScripts\Dinamic\Model\User;
 
 /**
@@ -67,45 +64,6 @@ abstract class PanelController extends BaseController
     }
 
     /**
-     * Returns the data to navigate between the records in the source list.
-     *   - Array: When accessed from a row link with a navigation token.
-     *   - Empty: When no token, the seed has expired or the current record is not in it.
-     *
-     * @return array
-     */
-    public function getNavigation(): array
-    {
-        $token = $this->request->query->getAlnum('navfrom');
-        if (empty($token)) {
-            return [];
-        }
-
-        // search the seed of this controller codes for user
-        $data = Cache::get('nav-' . $this->user->nick . '-' . $token);
-        $codes = is_array($data) ? ($data['targets'][$this->url()] ?? []) : [];
-        if (empty($codes)) {
-            return [];
-        }
-
-        // locate the record into the seed
-        $model = $this->tab($this->getMainViewName())->model;
-        $code = method_exists($model, 'id') ? $model->id() : $model->primaryColumnValue();
-        $position = array_search((string)$code, $codes, true);
-        if (false === $position) {
-            return [];
-        }
-
-        // count and position are null when the seed can not locate the record in the whole list
-        $url = $this->url() . '?code=%s&navfrom=' . $token;
-        return [
-            'count' => $data['count'] ?? null,
-            'next' => isset($codes[$position + 1]) ? sprintf($url, rawurlencode($codes[$position + 1])) : '',
-            'position' => isset($data['start']) ? $data['start'] + $position + 1 : null,
-            'prev' => $position > 0 ? sprintf($url, rawurlencode($codes[$position - 1])) : '',
-        ];
-    }
-
-    /**
      * Runs the controller's private logic.
      *
      * @param Response $response
@@ -118,9 +76,6 @@ abstract class PanelController extends BaseController
 
         // Get any operations that have to be performed
         $action = $this->request->inputOrQuery('action', '');
-
-        // el usuario debe poder acceder al registro antes de ejecutar ninguna acción sobre él
-        $this->assertActionOwnerData((string)$action);
 
         // Runs operations before reading data
         if ($this->execPreviousAction($action) === false || $this->pipeFalse('execPreviousAction', $action) === false) {
@@ -150,33 +105,11 @@ abstract class PanelController extends BaseController
             if ($viewName === $mainViewName && $view->model->exists()) {
                 $this->hasData = true;
             }
-
-            // save the navigation snapshot of list tabs, except on actions without page render
-            if ('export' !== $action && $view instanceof ListView) {
-                $view->saveNavigation();
-            }
         }
 
         // General operations with the loaded data
         $this->execAfterAction($action);
         $this->pipeFalse('execAfterAction', $action);
-    }
-
-    /**
-     * Devuelve las vistas agrupadas por la clave de grupo de sus settings, en el orden en que
-     * se añadieron. Las vistas sin grupo van primero, bajo la clave vacía.
-     *
-     * @return array<string, BaseView[]>
-     */
-    public function getTabGroups(): array
-    {
-        $groups = ['' => []];
-        foreach ($this->views as $viewName => $view) {
-            $group = (string)($view->settings['group'] ?? '');
-            $groups[$group][$viewName] = $view;
-        }
-
-        return array_filter($groups);
     }
 
     /**
@@ -208,15 +141,6 @@ abstract class PanelController extends BaseController
         foreach (array_keys($this->views) as $viewName) {
             $this->views[$viewName]->settings['card'] = $this->tabsPosition !== 'top';
         }
-    }
-
-    /**
-     * Asigna la pestaña a un grupo. La clave se traduce al pintar las pestañas, por ejemplo 'sales'.
-     * Solo se muestra agrupada en la posición de pestañas 'left'.
-     */
-    public function setTabGroup(string $viewName, string $group): BaseView
-    {
-        return $this->setSettings($viewName, 'group', $group);
     }
 
     /**
@@ -289,17 +213,6 @@ abstract class PanelController extends BaseController
         $this->addCustomView($viewName, $view);
 
         return $view;
-    }
-
-    /**
-     * Se ejecuta antes de cualquier acción para comprobar que el usuario puede acceder
-     * al registro sobre el que se ejecuta. Debe lanzar una KernelException si no puede.
-     * Por defecto no comprueba nada; EditController comprueba el registro principal.
-     *
-     * @param string $action
-     */
-    protected function assertActionOwnerData(string $action): void
-    {
     }
 
     /**
@@ -574,12 +487,6 @@ abstract class PanelController extends BaseController
             return [];
         }
 
-        // la variante seleccionada se muestra la primera en la carga inicial del modal
-        $selected = (string)$this->request->input('selected', '');
-        if ('' !== $selected) {
-            $column->widget->setCustomValue($selected);
-        }
-
         $variantes = $column->widget->variantes(
             $this->request->input('query', ''),
             $this->request->input('codfabricante', ''),
@@ -587,25 +494,8 @@ abstract class PanelController extends BaseController
             $this->request->input('sort', '')
         );
 
-        // cargamos los productos en una sola consulta para obtener sus urls
-        $productIds = [];
-        foreach ($variantes as $variante) {
-            $productIds[$variante->idproducto] = $variante->idproducto;
-        }
-        $productos = [];
-        if (!empty($productIds)) {
-            $where = [Where::in('idproducto', array_values($productIds))];
-            foreach (Producto::all($where, [], 0, 0) as $producto) {
-                $productos[$producto->idproducto] = $producto;
-            }
-        }
-
         $results = [];
         foreach ($variantes as $variante) {
-            $url = isset($productos[$variante->idproducto]) ?
-                $productos[$variante->idproducto]->url() :
-                $variante->url();
-
             $results[] = [
                 'id_variante' => $variante->idvariante,
                 'id_producto' => $variante->idproducto,
@@ -616,7 +506,7 @@ abstract class PanelController extends BaseController
                 'stock' => $variante->stockfis,
                 'stock_str' => Tools::number($variante->stockfis, 0),
                 'match' => $variante->{$column->widget->match},
-                'url' => $url
+                'url' => $variante->url()
             ];
         }
         return $results;
@@ -639,12 +529,6 @@ abstract class PanelController extends BaseController
             return [];
         }
 
-        // la subcuenta seleccionada se muestra la primera en la carga inicial del modal
-        $selected = (string)$this->request->input('selected', '');
-        if ('' !== $selected) {
-            $column->widget->setCustomValue($selected);
-        }
-
         $subcuentas = $column->widget->subcuentas(
             $this->request->input('query', ''),
             $this->request->request->get('codejercicio', ''),
@@ -656,7 +540,6 @@ abstract class PanelController extends BaseController
             $results[] = [
                 'codsubcuenta' => $subcuenta->codsubcuenta,
                 'descripcion' => $subcuenta->descripcion,
-                'match' => $subcuenta->{$column->widget->match},
                 'saldo' => $subcuenta->saldo,
                 'url' => $subcuenta->url()
             ];

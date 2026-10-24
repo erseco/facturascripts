@@ -78,7 +78,6 @@ class PresupuestoCliente extends SalesDocument
         $newLine->excepcioniva = $this->getSubject()->excepcioniva;
         $newLine->idpresupuesto = $this->idpresupuesto;
         $newLine->irpf = $this->irpf;
-        $newLine->codretencion = $this->getRetentionFromPercentage($this->irpf)?->codretencion;
         $newLine->loadFromData($data, $exclude);
 
         // si no viene de getNewProductLine(), calculamos la línea

@@ -96,8 +96,7 @@ class EditProducto extends EditController
             ->disableColumn('product')
             ->setSettings('btnDelete', false)
             ->setSettings('btnNew', false)
-            ->setSettings('checkBoxes', false)
-            ->setSettings('group', 'warehouse');
+            ->setSettings('checkBoxes', false);
     }
 
     protected function createViewsPedidosProveedores(string $viewName = 'ListLineaPedidoProveedor'): void
@@ -117,14 +116,12 @@ class EditProducto extends EditController
             ->disableColumn('product')
             ->setSettings('btnDelete', false)
             ->setSettings('btnNew', false)
-            ->setSettings('checkBoxes', false)
-            ->setSettings('group', 'warehouse');
+            ->setSettings('checkBoxes', false);
     }
 
     protected function createViewsStock(string $viewName = 'EditStock'): void
     {
-        $this->addEditListView($viewName, 'Stock', 'stock', 'fa-solid fa-dolly')
-            ->setSettings('group', 'warehouse');
+        $this->addEditListView($viewName, 'Stock', 'stock', 'fa-solid fa-dolly');
 
         // si solamente hay un almacén, ocultamos la columna
         if (Almacenes::count() <= 1) {

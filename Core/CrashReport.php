@@ -27,19 +27,6 @@ use Throwable;
  */
 final class CrashReport
 {
-    /**
-     * Indica si se pueden mostrar los botones de desactivar plugins y reconstruir, que incluyen el token de Deploy.
-     * Solo se muestran a un administrador con sesión válida o a quien accede desde la propia máquina.
-     */
-    public static function canShowDeployButtons(): bool
-    {
-        if (Tools::config('disable_deploy_actions', false)) {
-            return false;
-        }
-
-        return self::isLocalRequest() || self::hasAdminSession();
-    }
-
     public static function getErrorFragment(string $file, int $line, int $linesToShow = 10, bool $html = false): string
     {
         if (!is_readable($file)) {
@@ -124,24 +111,10 @@ final class CrashReport
         register_shutdown_function('FacturaScripts\Core\CrashReport::shutdown');
     }
 
-    /**
-     * Indica si un error de PHP es fatal y debe mostrar la pantalla de error.
-     * Los avisos, notificaciones y deprecaciones (también los de usuario, como los que lanzan
-     * Twig o symfony/deprecation-contracts con trigger_error) no detienen la ejecución.
-     */
-    public static function isFatalError(int $type): bool
-    {
-        $nonFatal = [
-            E_WARNING, E_NOTICE, E_DEPRECATED, E_CORE_ERROR, E_CORE_WARNING,
-            E_USER_WARNING, E_USER_NOTICE, E_USER_DEPRECATED,
-        ];
-
-        return false === in_array($type, $nonFatal, true);
-    }
-
     public static function newToken(): string
     {
-        return AppKey::sign('crash-report', date('Y-m-d H'));
+        $seed = Tools::config('db_name') . Tools::config('db_user') . Tools::config('db_password');
+        return md5($seed . date('Y-m-d H'));
     }
 
     public static function save(array $info): void
@@ -167,7 +140,7 @@ final class CrashReport
     public static function shutdown(): void
     {
         $error = error_get_last();
-        if (!isset($error) || false === self::isFatalError($error['type'])) {
+        if (!isset($error) || in_array($error['type'], [E_WARNING, E_NOTICE, E_DEPRECATED, E_CORE_ERROR, E_CORE_WARNING])) {
             return;
         }
 
@@ -195,19 +168,32 @@ final class CrashReport
 
     public static function validateToken(string $token): bool
     {
-        // aceptamos también el token de la hora anterior, por si ha cambiado la hora desde que se mostró
-        foreach (['now', '-1 hour'] as $time) {
-            if (AppKey::verify('crash-report', date('Y-m-d H', strtotime($time)), $token)) {
-                return true;
-            }
-        }
-
-        return false;
+        return $token === self::newToken();
     }
 
     private static function canShowDebugInfo(): bool
     {
         return Tools::config('debug', false);
+    }
+
+    private static function canShowDeployButtons(): bool
+    {
+        if (Tools::config('disable_deploy_actions', false)) {
+            return false;
+        }
+
+        // comprobamos si existen las cookies de login
+        if (isset($_COOKIE['fsNick']) && isset($_COOKIE['fsLogkey'])) {
+            return true;
+        }
+
+        // si el dominio es localhost, también mostramos los botones
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if (strpos($host, 'localhost') !== false) {
+            return true;
+        }
+
+        return false;
     }
 
     private static function formatErrorMessage(string $message): string
@@ -326,48 +312,6 @@ final class CrashReport
             . '</div>';
 
         return $html;
-    }
-
-    /**
-     * Comprueba las cookies de login contra la base de datos, sin usar modelos de Dinamic,
-     * porque esta página se muestra precisamente cuando Dinamic o algún plugin fallan.
-     */
-    private static function hasAdminSession(): bool
-    {
-        $nick = $_COOKIE['fsNick'] ?? '';
-        $logkey = $_COOKIE['fsLogkey'] ?? '';
-        if (false === is_string($nick) || false === is_string($logkey) || $nick === '' || $logkey === '') {
-            return false;
-        }
-
-        try {
-            $user = DbQuery::table('users')->whereEq('nick', $nick)->first();
-        } catch (Throwable $th) {
-            return false;
-        }
-
-        if (empty($user) || false === is_string($user['logkey']) || false === hash_equals($user['logkey'], $logkey)) {
-            return false;
-        }
-
-        // en PostgreSQL los booleanos llegan como 't' o 'f'
-        $isTrue = fn($value) => in_array(strtolower((string)$value), ['true', 't', '1'], true);
-        return $isTrue($user['admin']) && $isTrue($user['enabled']);
-    }
-
-    /**
-     * Indica si la petición llega desde la propia máquina y no a través de un proxy. No se usa la cabecera Host
-     * ni X-Forwarded-For, porque las controla el cliente.
-     */
-    private static function isLocalRequest(): bool
-    {
-        foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_FORWARDED', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP'] as $header) {
-            if (!empty($_SERVER[$header])) {
-                return false;
-            }
-        }
-
-        return in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
     }
 
     private static function showCliError(array $info, array $error): void

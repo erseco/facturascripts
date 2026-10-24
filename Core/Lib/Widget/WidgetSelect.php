@@ -141,9 +141,7 @@ class WidgetSelect extends BaseWidget
         if ('' === $value) {
             $model->{$this->fieldname} = null;
         } elseif ($this->multiple && false === $this->readonly()) {
-            // el select múltiple llega como array: nunca se deserializa lo que envía el usuario
-            $values = array_filter($request->request->getArray($this->fieldname), 'is_scalar');
-            $model->{$this->fieldname} = empty($values) ? null : implode(',', $values);
+            $model->{$this->fieldname} = implode(',', unserialize($value));
         } else {
             $model->{$this->fieldname} = $value;
         }
@@ -299,23 +297,7 @@ class WidgetSelect extends BaseWidget
         AssetManager::addCss($route . '/node_modules/select2/dist/css/select2.min.css?v=5');
         AssetManager::addCss($route . '/node_modules/select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.min.css?v=5');
         AssetManager::addJs($route . '/node_modules/select2/dist/js/select2.min.js?v=5', 2);
-        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetSelect.js?v=8');
-    }
-
-    /**
-     * Firma de los parámetros de consulta, para que el controlador rechace las peticiones
-     * autocomplete, datalist y select que pidan otra tabla o columnas.
-     *
-     * @return string
-     */
-    protected function fieldSign(): string
-    {
-        return CodeModel::sign(
-            (string)$this->source,
-            (string)$this->fieldcode,
-            (string)$this->fieldtitle,
-            (string)$this->fieldfilter
-        );
+        AssetManager::addJs($route . '/Dinamic/Assets/JS/WidgetSelect.js?v=7');
     }
 
     /**
@@ -359,7 +341,6 @@ class WidgetSelect extends BaseWidget
             . ' data-fieldcode="' . $this->fieldcode . '"'
             . ' data-fieldtitle="' . $this->fieldtitle . '"'
             . ' data-fieldfilter="' . $this->fieldfilter . '"'
-            . ' data-fieldsign="' . $this->fieldSign() . '"'
             . ' data-limit="' . $this->limit . '"'
             . ($sharedList ? ' data-shared-list="' . $this->sharedListId . '"' : '')
             . ($sharedSource ? ' data-shared-source="true"' : '')
@@ -508,8 +489,6 @@ class WidgetSelect extends BaseWidget
         $this->groupTitle = $child['group_title'] ?? '';
 
         if ($loadData && $this->source) {
-            // el límite de CodeModel es estático: lo cambiamos solo mientras cargamos los valores
-            $previousLimit = static::$codeModel::getLimit();
             static::$codeModel::setLimit($this->limit);
             $values = static::$codeModel->all($this->source, $this->fieldcode, $this->fieldtitle, !$this->required);
 
@@ -522,6 +501,7 @@ class WidgetSelect extends BaseWidget
                 }
 
                 // Mapa de fieldcode => group_fieldcode (valor del campo de agrupación en cada registro)
+                static::$codeModel::setLimit($this->limit);
                 $groupFieldRows = static::$codeModel->all($this->source, $this->fieldcode, $this->groupFieldcode, false);
                 $groupFieldMap = [];
                 foreach ($groupFieldRows as $row) {
@@ -542,8 +522,6 @@ class WidgetSelect extends BaseWidget
             } else {
                 $this->setValuesFromCodeModel($values, $this->translate);
             }
-
-            static::$codeModel::setLimit($previousLimit);
         }
     }
 

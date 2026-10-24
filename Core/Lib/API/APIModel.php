@@ -135,13 +135,10 @@ class APIModel extends APIResourceClass
         $param0 = empty($this->params) ? '' : $this->params[0];
         $code = $values[$field] ?? $param0;
         if ($this->model->load($code)) {
-            $hidden = $this->model->getApiFieldsToHide();
-            $this->setError(Tools::trans('duplicate-record'), $this->filterHidden($this->model->toArray(), $hidden));
+            $this->setError(Tools::trans('duplicate-record'), $this->model->toArray());
             return false;
         } elseif (empty($values)) {
             $this->setError(Tools::trans('no-data-received-form'));
-            return false;
-        } elseif (false === $this->checkWritableFields($values)) {
             return false;
         }
 
@@ -169,8 +166,6 @@ class APIModel extends APIResourceClass
             return false;
         } elseif (empty($values)) {
             $this->setError(Tools::trans('no-data-received-form'));
-            return false;
-        } elseif (false === $this->checkWritableFields($values)) {
             return false;
         }
 
@@ -340,13 +335,6 @@ class APIModel extends APIResourceClass
         $operation = $this->request->query->getArray('operation');
         $order = $this->request->query->getArray('sort');
 
-        // el conector de cada filtro se concatena en el SQL: solo aceptamos AND u OR
-        $badOperations = array_keys(array_filter($operation, fn($value) => false === Where::isValidOperation($value)));
-        if (!empty($badOperations)) {
-            $this->setError('api: operation not allowed: ' . implode(', ', $badOperations));
-            return false;
-        }
-
         // obtenemos los registros
         $data = [];
         $hidden = $this->model->getApiFieldsToHide();
@@ -472,26 +460,5 @@ class APIModel extends APIResourceClass
         }
 
         return $data;
-    }
-
-    /**
-     * Rechaza la petición si intenta escribir en campos ocultos de la API
-     * (hashes, tokens de sesión, secretos...). Solo se comprueban columnas:
-     * las claves dentro de columnas json (columna.clave) dependen del modelo.
-     *
-     * @param array $values
-     *
-     * @return bool
-     */
-    private function checkWritableFields(array $values): bool
-    {
-        $hidden = array_filter($this->model->getApiFieldsToHide(), fn($field) => strpos($field, '.') === false);
-        $badFields = array_intersect(array_keys($values), $hidden);
-        if (empty($badFields)) {
-            return true;
-        }
-
-        $this->setError('api: fields not allowed: ' . implode(', ', $badFields));
-        return false;
     }
 }

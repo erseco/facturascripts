@@ -19,16 +19,13 @@
 
 namespace FacturaScripts\Core\Controller;
 
-use FacturaScripts\Core\AppKey;
 use FacturaScripts\Core\Base\Controller;
 use FacturaScripts\Core\Base\ControllerPermissions;
 use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Http;
 use FacturaScripts\Core\Internal\Forja;
-use FacturaScripts\Core\Internal\PhpExtensions;
 use FacturaScripts\Core\Internal\Plugin;
 use FacturaScripts\Core\Kernel;
-use FacturaScripts\Core\KernelException;
 use FacturaScripts\Core\Migrations;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Response;
@@ -45,7 +42,6 @@ use ZipArchive;
 class Updater extends Controller
 {
     const CORE_ZIP_FOLDER = 'facturascripts';
-    const DEPLOY_PENDING_FILE = 'update_deploy_pending';
     const UPDATE_CORE_URL = 'https://facturascripts.com/DownloadBuild';
 
     /** @var array */
@@ -62,14 +58,9 @@ class Updater extends Controller
 
     public function __construct(string $className, string $uri = '')
     {
-        // si no existe el archivo Empresa en Dinamic, o acabamos de actualizar el núcleo, reconstruimos
-        // antes de nada, para que Dinamic tenga las clases de la nueva versión
-        $pendingFile = Tools::folder('MyFiles', self::DEPLOY_PENDING_FILE);
-        if (file_exists($pendingFile) || !file_exists(Tools::folder('Dinamic', 'Model', 'Empresa.php'))) {
+        // si no existe el archivo Empresa en Dinamic, reconstruimos
+        if (!file_exists(Tools::folder('Dinamic', 'Model', 'Empresa.php'))) {
             Plugins::deploy(true, false);
-            if (file_exists($pendingFile)) {
-                unlink($pendingFile);
-            }
         }
 
         parent::__construct($className, $uri);
@@ -125,31 +116,12 @@ class Updater extends Controller
      */
     public function privateCore(&$response, $user, $permissions)
     {
-        // solo los administradores pueden usar esta página
-        if (false === $user->admin) {
-            throw new KernelException('AccessDenied', Tools::trans('access-denied'));
-        }
-
         parent::privateCore($response, $user, $permissions);
 
         $this->telemetryManager = new Telemetry();
 
-        $action = $this->request->get('action', '');
-
-        // si falta la clave de la instalación en el config.php, la añadimos
-        if (AppKey::isDerived()) {
-            $this->saveAppKey($action);
-        }
-
-        // avisamos de las extensiones de PHP que faltan
-        PhpExtensions::warnMissing();
-
-        // sin la extensión zip no se pueden instalar las actualizaciones
-        if (in_array($action, ['download', 'update']) && PhpExtensions::missing(['zip'])) {
-            return;
-        }
-
         // en las acciones que escriben en disco, comprobamos que las carpetas sean escribibles
+        $action = $this->request->get('action', '');
         if (in_array($action, ['cancel', 'download', 'post-update', 'update'])) {
             $folders = $this->notWritableFolders();
             if ($folders) {
@@ -356,11 +328,6 @@ class Updater extends Controller
                 continue;
             }
 
-            // si la build requiere una versión de PHP más reciente, no la ofrecemos
-            if (false === Forja::isPhpCompatible($build)) {
-                continue;
-            }
-
             $item = [
                 'description' => Tools::trans('core-update', [
                     '%currentVersion%' => self::getCoreVersion(),
@@ -406,9 +373,6 @@ class Updater extends Controller
             }
             if ($build['maxcore'] > 0 && $build['maxcore'] < $coreVersion) {
                 continue; // Build demasiado antigua para el core actual
-            }
-            if (false === Forja::isPhpCompatible($build)) {
-                continue; // Requiere una versión de PHP más reciente
             }
 
             $item = [
@@ -483,31 +447,6 @@ class Updater extends Controller
 
         Migrations::run();
         Plugins::deploy(true, true);
-
-        // informamos a la telemetría de la nueva versión del core y de la lista de plugins
-        $this->telemetryManager->update(true);
-    }
-
-    /**
-     * Añade FS_APP_KEY al config.php. Si no se puede escribir, avisa con la línea a añadir.
-     */
-    private function saveAppKey(string $action): void
-    {
-        // los formularios enviados vienen firmados con la clave derivada: esperamos a una visita normal
-        if ('' !== $action) {
-            return;
-        }
-
-        $key = defined('FS_APP_KEY') ? null : AppKey::saveToConfig();
-        if (null !== $key) {
-            // la usamos ya en esta petición, para que los formularios de la página sigan siendo válidos
-            define('FS_APP_KEY', $key);
-            return;
-        }
-
-        Tools::log()->warning('app-key-missing', [
-            '%line%' => "define('FS_APP_KEY', '" . AppKey::generate() . "');"
-        ]);
     }
 
     private function setCoreWarnings(): void
@@ -589,17 +528,7 @@ class Updater extends Controller
             $this->updatePlugin($zip, $fileName);
 
         if ($done) {
-            // a partir de aquí no ejecutamos nada más en esta petición: las clases cargadas en memoria
-            // son de la versión anterior y se mezclarían con las nuevas del disco.
-            // Dinamic se reconstruye al empezar la siguiente petición (post-update)
-            Kernel::markCodeReplaced();
-            if ($idItem == Forja::CORE_PROJECT_ID) {
-                file_put_contents(Tools::folder('MyFiles', self::DEPLOY_PENDING_FILE), Tools::dateTime());
-            }
-            if (function_exists('opcache_reset')) {
-                @opcache_reset();
-            }
-
+            Plugins::deploy(true, false);
             Cache::clear();
             $this->setTemplate(false);
             $this->response->setContent('reloading...');
@@ -637,7 +566,11 @@ class Updater extends Controller
         }
 
         // update files
-        self::updateRootFiles(Tools::folder(self::CORE_ZIP_FOLDER), Tools::folder());
+        foreach (['index.php', 'replace_index_to_restore.php'] as $name) {
+            $origin = Tools::folder(self::CORE_ZIP_FOLDER, $name);
+            $dest = Tools::folder($name);
+            copy($origin, $dest);
+        }
 
         // remove zip folder
         Tools::folderDelete(Tools::folder(self::CORE_ZIP_FOLDER));
@@ -654,21 +587,6 @@ class Updater extends Controller
         // remove zip file
         unlink(Tools::folder($fileName));
         return $return;
-    }
-
-    private static function updateRootFiles(string $originFolder, string $destFolder): void
-    {
-        foreach (['index.php', 'replace_index_to_restore.php'] as $name) {
-            copy($originFolder . DIRECTORY_SEPARATOR . $name, $destFolder . DIRECTORY_SEPARATOR . $name);
-        }
-
-        // Opcache solo compara la fecha de modificación: si replace_index_to_restore.php tiene la misma
-        // que index.php, al renombrarlo seguiría ejecutándose el index.php en caché
-        $index = $destFolder . DIRECTORY_SEPARATOR . 'index.php';
-        $restore = $destFolder . DIRECTORY_SEPARATOR . 'replace_index_to_restore.php';
-        if (file_exists($index) && file_exists($restore)) {
-            touch($restore, filemtime($index) - 60);
-        }
     }
 
     private function willItWorkOnNewCore(Plugin $plugin, float $newCore): bool

@@ -31,9 +31,6 @@ use FacturaScripts\Core\Mod\CalculatorModSpain;
  */
 final class Kernel
 {
-    /** @var bool */
-    private static $code_replaced = false;
-
     /** @var float|null */
     private static $mock_execution_time;
 
@@ -89,16 +86,6 @@ final class Kernel
     public static function clearRoutes(): void
     {
         self::$routes = [];
-    }
-
-    /**
-     * Indica si esta petición ha sustituido los archivos del núcleo o de un plugin.
-     * En ese caso, el código del disco ya no coincide con las clases cargadas en memoria
-     * y no se debe ejecutar nada más en la petición.
-     */
-    public static function codeReplaced(): bool
-    {
-        return self::$code_replaced;
     }
 
     /**
@@ -218,15 +205,6 @@ final class Kernel
         }
 
         return false !== file_put_contents($lockFile, $processName);
-    }
-
-    /**
-     * Marca que esta petición ha sustituido archivos de código, para que index.php no
-     * ejecute nada más tras enviar la respuesta (cola de trabajos, telemetría, logs...).
-     */
-    public static function markCodeReplaced(bool $replaced = true): void
-    {
-        self::$code_replaced = $replaced;
     }
 
     /**
@@ -378,7 +356,7 @@ final class Kernel
      */
     public static function version(): float
     {
-        return 2026.71;
+        return 2026.65;
     }
 
     /**
@@ -432,10 +410,8 @@ final class Kernel
             header('Content-Length: ' . ob_get_length());
         }
 
-        // enviamos el buffer de salida, si queda alguno abierto, y cerramos
-        if (ob_get_level() > 0) {
-            ob_end_flush();
-        }
+        // enviamos el buffer de salida y cerramos
+        ob_end_flush();
         flush();
     }
 
