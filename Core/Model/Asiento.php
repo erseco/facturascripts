@@ -115,7 +115,11 @@ class Asiento extends ModelClass
             return false;
         }
 
-        // las partidas se eliminan en onDeleteBefore()
+        // force delete lines to update subaccounts
+        foreach ($this->getLines() as $line) {
+            $line->delete();
+        }
+
         if (false === parent::delete()) {
             return false;
         }
@@ -360,17 +364,6 @@ class Asiento extends ModelClass
         }
 
         return parent::onChange($field);
-    }
-
-    protected function onDeleteBefore(): bool
-    {
-        // forzamos la eliminación de las partidas para actualizar las subcuentas. Lo hacemos aquí,
-        // y no en delete(), para que se ejecuten antes las extensiones deleteBefore
-        foreach ($this->getLines() as $line) {
-            $line->delete();
-        }
-
-        return parent::onDeleteBefore();
     }
 
     /**

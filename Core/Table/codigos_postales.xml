@@ -38,7 +38,7 @@
     </column>
     <column>
         <name>number</name>
-        <type>character varying(10)</type>
+        <type>integer</type>
         <null>NO</null>
     </column>
     <constraint>

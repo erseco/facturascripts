@@ -709,11 +709,8 @@ class NewMail
         // Generamos un identificador único para el correo electrónico
         $uuid = uniqid();
 
-        // obtenemos los adjuntos, sin las imágenes en base64 que PHPMailer incrusta desde el HTML,
-        // porque su contenido está en memoria y el HTML guardado ya las incluye
-        $attachments = array_filter($this->mail->getAttachments(), function (array $attach): bool {
-            return false === ($attach[5] && 'inline' === $attach[6]);
-        });
+        // obtenemos los adjuntos
+        $attachments = $this->mail->getAttachments();
 
         // guardar correo electrónico enviado
         foreach (array_unique($addresses) as $address) {
@@ -742,12 +739,6 @@ class NewMail
 
         foreach ($attachments as $attach) {
             $newPath = $path . $attach[1];
-
-            // los adjuntos creados desde un string tienen el contenido en lugar de la ruta
-            if ($attach[5]) {
-                file_put_contents($newPath, $attach[0]);
-                continue;
-            }
 
             // movemos los adjuntos de la carpeta temporal a la carpeta de adjuntos del email
             $tmpPath = FS_FOLDER . '/' . static::ATTACHMENTS_TMP_PATH . $attach[1];

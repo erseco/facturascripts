@@ -29,7 +29,6 @@ use FacturaScripts\Core\Lib\Import\CSVImport;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
 use FacturaScripts\Core\WorkQueue;
-use Throwable;
 
 /**
  * Clase base de la que heredan todos los modelos. Se encarga de la conexión
@@ -286,40 +285,18 @@ abstract class ModelClass
             return true;
         }
 
-        // las extensiones pueden impedir la eliminación antes de que se modifique nada
         if (false === $this->pipeFalse('deleteBefore')) {
             return false;
         }
 
-        // abrimos una transacción, salvo que ya haya una abierta, para no dejar
-        // datos relacionados a medio eliminar si algo falla
-        $newTransaction = false === static::db()->inTransaction() && static::db()->beginTransaction();
-
-        try {
-            $deleted = $this->onDeleteBefore() && static::table()
-                    ->whereEq(static::primaryColumn(), $this->id())
-                    ->delete();
-            if ($deleted) {
-                $this->onDelete();
-            }
-        } catch (Throwable $exception) {
-            if ($newTransaction) {
-                static::db()->rollback();
-            }
-            throw $exception;
-        }
-
+        $deleted = static::table()
+            ->whereEq(static::primaryColumn(), $this->id())
+            ->delete();
         if (false === $deleted) {
-            if ($newTransaction) {
-                static::db()->rollback();
-            }
             return false;
         }
 
-        if ($newTransaction) {
-            static::db()->commit();
-        }
-
+        $this->onDelete();
         $this->syncOriginal();
         $this->clearCache();
 
@@ -481,21 +458,17 @@ abstract class ModelClass
     public function isDirty(?string $key = null): bool
     {
         if ($key === null) {
-            // sin valores originales (modelo nuevo) se considera modificado
-            return empty($this->original) || !empty($this->getDirty());
+            $current = [];
+            foreach (array_keys($this->getModelFields()) as $key) {
+                $current[$key] = $this->{$key};
+            }
+            return $current !== $this->original;
         }
 
         $current = $this->{$key} ?? null;
         $original = $this->original[$key] ?? null;
 
-        // comparamos los valores convertidos al tipo del campo, igual que en loadFromData(),
-        // para no marcar como modificado un '5' frente a un 5, o una fecha en otro formato
-        $field = $this->getModelFields()[$key] ?? null;
-        if ($field === null || !is_scalar($current ?? '') || !is_scalar($original ?? '')) {
-            return $current !== $original;
-        }
-
-        return $this->getValueForField($field, $current) !== $this->getValueForField($field, $original);
+        return $current !== $original;
     }
 
     /**
@@ -575,7 +548,20 @@ abstract class ModelClass
                 continue;
             }
 
-            $this->{$key} = $this->getValueForField($fields[$key], $value);
+            // comprobamos si es un varchar (con longitud establecida) u otro tipo de dato
+            $field = $fields[$key];
+            $type = !str_contains($field['type'], '(') ?
+                $field['type'] :
+                substr($field['type'], 0, strpos($field['type'], '('));
+
+            $this->{$key} = match ($type) {
+                'tinyint', 'boolean' => $this->getBoolValueForField($field, $value),
+                'integer', 'int' => $this->getIntegerValueForField($field, $value),
+                'decimal', 'double', 'double precision', 'float' => $this->getFloatValueForField($field, $value),
+                'date' => empty($value) ? null : Tools::date($value),
+                'datetime', 'timestamp' => empty($value) ? null : Tools::dateTime($value),
+                default => ($value === null && $field['is_nullable'] === 'NO') ? '' : $value,
+            };
         }
 
         if ($sync) {
@@ -1040,30 +1026,6 @@ abstract class ModelClass
     }
 
     /**
-     * Convierte un valor al tipo de dato definido por el campo.
-     *
-     * @param array $field
-     * @param mixed $value
-     * @return mixed
-     */
-    private function getValueForField(array $field, $value)
-    {
-        // comprobamos si es un varchar (con longitud establecida) u otro tipo de dato
-        $type = !str_contains($field['type'], '(') ?
-            $field['type'] :
-            substr($field['type'], 0, strpos($field['type'], '('));
-
-        return match ($type) {
-            'tinyint', 'boolean' => $this->getBoolValueForField($field, $value),
-            'integer', 'int' => $this->getIntegerValueForField($field, $value),
-            'decimal', 'double', 'double precision', 'float' => $this->getFloatValueForField($field, $value),
-            'date' => empty($value) ? null : Tools::date($value),
-            'datetime', 'timestamp' => empty($value) ? null : Tools::dateTime($value),
-            default => ($value === null && $field['is_nullable'] === 'NO') ? '' : $value,
-        };
-    }
-
-    /**
      * Define una relación uno a muchos.
      *
      * @param string $modelName
@@ -1119,15 +1081,6 @@ abstract class ModelClass
     protected function onDelete(): void
     {
         $this->pipe('onDelete');
-    }
-
-    /**
-     * Este método se llama antes de eliminar el registro, después de las extensiones deleteBefore.
-     * Es el lugar para eliminar los datos relacionados. Si devuelve false, se cancela la eliminación.
-     */
-    protected function onDeleteBefore(): bool
-    {
-        return true;
     }
 
     /**

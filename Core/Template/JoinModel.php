@@ -177,6 +177,11 @@ abstract class JoinModel
             return 0;
         }
 
+        $groupFields = $instance->getGroupFields();
+        if (!empty($groupFields)) {
+            $groupFields .= ', ';
+        }
+
         // buscamos en caché
         $cacheKey = $instance->getCacheKey('count');
         if (empty($where)) {
@@ -186,14 +191,14 @@ abstract class JoinModel
             }
         }
 
-        // si la vista agrupa registros, contamos los grupos y no las filas de cada grupo
-        $sql = empty($instance->getGroupFields()) ?
-            'SELECT COUNT(*) AS count_total FROM ' . $instance->getSQLFrom() . Where::multiSqlLegacy($where) :
-            'SELECT COUNT(*) AS count_total FROM (SELECT 1 FROM ' . $instance->getSQLFrom()
-            . Where::multiSqlLegacy($where) . $instance->getGroupBy() . ') AS join_groups';
+        $sql = 'SELECT ' . $groupFields . 'COUNT(*) count_total'
+            . ' FROM ' . $instance->getSQLFrom()
+            . Where::multiSqlLegacy($where)
+            . $instance->getGroupBy();
 
         $data = self::db()->select($sql);
-        $final = empty($data) ? 0 : (int)$data[0]['count_total'];
+        $count = count($data);
+        $final = $count == 1 ? (int)$data[0]['count_total'] : $count;
 
         // guardamos en caché
         if (empty($where)) {

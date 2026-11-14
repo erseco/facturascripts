@@ -21,7 +21,6 @@ namespace FacturaScripts\Core\Lib\ExtendedController;
 
 use FacturaScripts\Core\Base\DataBase\DataBaseWhere;
 use FacturaScripts\Core\Request;
-use FacturaScripts\Core\Tools;
 use FacturaScripts\Dinamic\Lib\ExportManager;
 
 /**
@@ -88,9 +87,8 @@ class EditView extends BaseView
             case 'load':
                 $exclude = ['action', 'code', 'option', 'return'];
                 foreach ($request->query->all() as $key => $value) {
-                    // los valores de la URL se muestran sin guardar, así que se limpian como en test()
-                    if (false === in_array($key, $exclude) && is_scalar($value)) {
-                        $this->model->{$key} = Tools::noHtml((string)$value);
+                    if (false === in_array($key, $exclude)) {
+                        $this->model->{$key} = $value;
                     }
                 }
                 break;

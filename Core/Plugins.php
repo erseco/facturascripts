@@ -116,27 +116,17 @@ final class Plugins
 
     public static function deploy(bool $clean = true, bool $initControllers = false): void
     {
-        // mientras se reconstruye Dinamic, el resto de peticiones se rechazan.
-        // Si ya estaba en mantenimiento (por ejemplo, desde el actualizador), no lo desactivamos aquí
-        $maintenance = Maintenance::enable();
+        PluginsDeploy::run(self::enabled(), $clean);
 
-        try {
-            PluginsDeploy::run(self::enabled(), $clean);
+        Kernel::rebuildRoutes();
+        Kernel::saveRoutes();
 
-            Kernel::rebuildRoutes();
-            Kernel::saveRoutes();
+        DbUpdater::rebuild();
 
-            DbUpdater::rebuild();
+        Tools::folderDelete(Tools::folder('MyFiles', 'Cache'));
 
-            Tools::folderDelete(Tools::folder('MyFiles', 'Cache'));
-
-            if ($initControllers) {
-                PluginsDeploy::initControllers();
-            }
-        } finally {
-            if ($maintenance) {
-                Maintenance::disable();
-            }
+        if ($initControllers) {
+            PluginsDeploy::initControllers();
         }
     }
 

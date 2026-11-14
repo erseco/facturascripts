@@ -29,7 +29,6 @@ use FacturaScripts\Core\Internal\PhpExtensions;
 use FacturaScripts\Core\Internal\Plugin;
 use FacturaScripts\Core\Kernel;
 use FacturaScripts\Core\KernelException;
-use FacturaScripts\Core\Maintenance;
 use FacturaScripts\Core\Migrations;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Response;
@@ -54,9 +53,6 @@ class Updater extends Controller
 
     /** @var bool */
     public $justRegistered = false;
-
-    /** @var Plugin[] */
-    public $obsoletePlugins = [];
 
     /** @var Telemetry */
     public $telemetryManager;
@@ -91,18 +87,6 @@ class Updater extends Controller
     public static function getCoreVersion(): float
     {
         return Kernel::version();
-    }
-
-    /**
-     * Devuelve los plugins instalados que están marcados como obsoletos en la forja.
-     *
-     * @return Plugin[]
-     */
-    public static function getObsoletePlugins(): array
-    {
-        return array_values(array_filter(Plugins::list(), static function (Plugin $plugin): bool {
-            return $plugin->isObsolete();
-        }));
     }
 
     public static function getUpdateItems(): array
@@ -176,7 +160,6 @@ class Updater extends Controller
             }
         }
 
-        $this->obsoletePlugins = self::getObsoletePlugins();
         $this->execAction($action);
     }
 
@@ -263,25 +246,6 @@ class Updater extends Controller
     }
 
     /**
-     * Desactiva un plugin obsoleto. Solo admite plugins marcados como obsoletos en la forja.
-     */
-    private function disableObsoletePluginAction(): void
-    {
-        if (false === $this->validateFormToken()) {
-            return;
-        }
-
-        $pluginName = $this->request->input('plugin', '');
-        foreach ($this->obsoletePlugins as $plugin) {
-            if ($plugin->name === $pluginName && $plugin->enabled) {
-                Plugins::disable($plugin->name);
-                Cache::clear();
-                return;
-            }
-        }
-    }
-
-    /**
      * Download selected update.
      */
     private function downloadAction(): void
@@ -346,10 +310,6 @@ class Updater extends Controller
                 $this->disableBetaUpdatesAction();
                 return;
 
-            case 'disable-obsolete':
-                $this->disableObsoletePluginAction();
-                break;
-
             case 'download':
                 $this->downloadAction();
                 return;
@@ -386,17 +346,6 @@ class Updater extends Controller
 
         $this->updaterItems = self::getUpdateItems();
         $this->setCoreWarnings();
-    }
-
-    /**
-     * Desactiva el modo mantenimiento que activó la acción update, si esta petición es su continuación.
-     */
-    private function finishMaintenance(): void
-    {
-        // si la petición trae el token y ha llegado hasta aquí, index.php ya lo ha validado
-        if ('' !== $this->request->get(Maintenance::URL_PARAM, '')) {
-            Maintenance::disable();
-        }
     }
 
     private static function getUpdateItemsCore(): array
@@ -442,11 +391,6 @@ class Updater extends Controller
 
     private static function getUpdateItemsPlugin(Plugin $plugin): array
     {
-        // los plugins obsoletos no se actualizan
-        if ($plugin->isObsolete()) {
-            return [];
-        }
-
         $id = $plugin->forja('idplugin', 0);
         $fileName = 'update-' . $id . '.zip';
         $coreVersion = self::getCoreVersion();
@@ -534,13 +478,11 @@ class Updater extends Controller
         $plugName = $this->request->get('init', '');
         if ($plugName) {
             Plugins::deploy(true, true);
-            $this->finishMaintenance();
             return;
         }
 
         Migrations::run();
         Plugins::deploy(true, true);
-        $this->finishMaintenance();
 
         // informamos a la telemetría de la nueva versión del core y de la lista de plugins
         $this->telemetryManager->update(true);
@@ -594,8 +536,8 @@ class Updater extends Controller
                 continue;
             }
 
-            // ¿Hay actualización para el nuevo core? Los obsoletos no se actualizan
-            if (false === $plugin->isObsolete() && $plugin->forja('maxcore', 0) >= $newCore) {
+            // ¿Hay actualización para el nuevo core?
+            if ($plugin->forja('maxcore', 0) >= $newCore) {
                 $this->coreUpdateWarnings[$plugin->name] = Tools::trans('plugin-need-update', [
                     '%plugin%' => $plugin->name
                 ]);
@@ -641,19 +583,10 @@ class Updater extends Controller
             }
         }
 
-        // activamos el modo mantenimiento hasta que termine el post-update, para que el resto
-        // de peticiones, el cron y la cola de trabajos no ejecuten código a medio sustituir
-        $maintenance = Maintenance::enable();
-        $maintenanceToken = Maintenance::token();
-
         // extract core/plugin zip file
         $done = ($idItem == Forja::CORE_PROJECT_ID) ?
             $this->updateCore($zip, $fileName) :
             $this->updatePlugin($zip, $fileName);
-
-        if (false === $done && $maintenance) {
-            Maintenance::disable();
-        }
 
         if ($done) {
             // a partir de aquí no ejecutamos nada más en esta petición: las clases cargadas en memoria
@@ -670,13 +603,7 @@ class Updater extends Controller
             Cache::clear();
             $this->setTemplate(false);
             $this->response->setContent('reloading...');
-
-            // el post-update lleva el token para atravesar el modo mantenimiento
-            $url = $this->getClassName() . '?action=post-update&init=' . $init;
-            if ($maintenanceToken) {
-                $url .= '&' . Maintenance::URL_PARAM . '=' . $maintenanceToken;
-            }
-            $this->redirect($url, 3);
+            $this->redirect($this->getClassName() . '?action=post-update&init=' . $init, 3);
         }
     }
 

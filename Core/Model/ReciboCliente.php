@@ -113,6 +113,18 @@ class ReciboCliente extends ModelClass
         $this->vencido = false;
     }
 
+    public function delete(): bool
+    {
+        foreach ($this->getPayments() as $pay) {
+            if (false === $pay->delete()) {
+                Tools::log()->warning('cant-remove-payment');
+                return false;
+            }
+        }
+
+        return parent::delete();
+    }
+
     public function disableInvoiceUpdate(bool $disable = true): void
     {
         $this->disable_invoice_update = $disable;
@@ -224,9 +236,6 @@ class ReciboCliente extends ModelClass
             $this->codigofactura = $this->getInvoice()->codigo;
         }
 
-        // pagado no admite nulos: un valor nulo equivale a no pagado
-        $this->pagado = (bool)$this->pagado;
-
         // comprobamos la fecha de pago
         if ($this->pagado === false) {
             $this->fechapago = null;
@@ -270,8 +279,7 @@ class ReciboCliente extends ModelClass
         $pago = new DinPagoCliente();
         $pago->codpago = $this->codpago;
         $pago->fecha = $this->fechapago ?? $pago->fecha;
-        // al desmarcar el recibo, el pago de anulación revierte también los gastos bancarios
-        $pago->gastos = $this->pagado ? abs($this->gastos) : 0 - abs($this->gastos);
+        $pago->gastos = $this->gastos;
         $pago->idrecibo = $this->idrecibo;
         $pago->importe = $this->pagado ? $this->importe : 0 - $this->importe;
         $pago->nick = $this->nick;
@@ -296,14 +304,8 @@ class ReciboCliente extends ModelClass
                 Tools::log()->warning('non-editable-columns', ['%columns%' => 'idfactura']);
                 return false;
 
-            case 'gastos':
             case 'importe':
-                // el pago ya se generó con estos valores: hay que desmarcar el recibo antes de cambiarlos
-                if ($this->getOriginal('pagado')) {
-                    Tools::log()->warning('non-editable-columns', ['%columns%' => $field]);
-                    return false;
-                }
-                return true;
+                return !$this->getOriginal('pagado');
 
             case 'pagado':
                 $this->newPayment();
@@ -320,19 +322,6 @@ class ReciboCliente extends ModelClass
         $this->updateCustomerRisk();
 
         parent::onDelete();
-    }
-
-    protected function onDeleteBefore(): bool
-    {
-        // eliminamos los pagos aquí, y no en delete(), para que se ejecuten antes las extensiones deleteBefore
-        foreach ($this->getPayments() as $pay) {
-            if (false === $pay->delete()) {
-                Tools::log()->warning('cant-remove-payment');
-                return false;
-            }
-        }
-
-        return parent::onDeleteBefore();
     }
 
     protected function onInsert(): void
