@@ -23,7 +23,6 @@ use Exception;
 use FacturaScripts\Core\Cache;
 use FacturaScripts\Core\Contract\ControllerInterface;
 use FacturaScripts\Core\Kernel;
-use FacturaScripts\Core\Maintenance;
 use FacturaScripts\Core\Plugins;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
@@ -71,17 +70,14 @@ class Cron implements ControllerInterface
         echo PHP_EOL . PHP_EOL . Tools::trans('starting-cron');
         ob_flush();
 
-        // ejecutamos el cron de cada plugin, los trabajos del core y la cola de trabajos.
-        // Si mientras tanto se activa el modo mantenimiento (se está instalando una actualización),
-        // no continuamos con el resto: el código puede estar a medio sustituir
-        foreach (['runPlugins', 'runCoreJobs', 'runWorkQueue'] as $step) {
-            $this->{$step}();
+        // ejecutamos el cron de cada plugin
+        $this->runPlugins();
 
-            if (Maintenance::isActive()) {
-                echo PHP_EOL . PHP_EOL . Tools::trans('cron-maintenance-mode') . PHP_EOL . PHP_EOL;
-                return;
-            }
-        }
+        // ejecutamos los trabajos del core
+        $this->runCoreJobs();
+
+        // ejecutamos la cola de trabajos
+        $this->runWorkQueue();
 
         // mostramos los mensajes del log
         $levels = ['critical', 'error', 'info', 'notice', 'warning'];
@@ -289,11 +285,6 @@ END;
     protected function runPlugins(): void
     {
         foreach (Plugins::enabled() as $pluginName) {
-            // si se ha activado el modo mantenimiento, no ejecutamos el cron del resto de plugins
-            if (Maintenance::isActive()) {
-                break;
-            }
-
             $cronClass = '\\FacturaScripts\\Plugins\\' . $pluginName . '\\Cron';
             if (false === class_exists($cronClass)) {
                 continue;

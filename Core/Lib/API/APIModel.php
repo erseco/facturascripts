@@ -145,7 +145,9 @@ class APIModel extends APIResourceClass
             return false;
         }
 
-        $this->setModelValues($values);
+        foreach ($values as $key => $value) {
+            $this->model->{$key} = $value === 'null' ? null : $value;
+        }
 
         return $this->saveResource();
     }
@@ -172,7 +174,9 @@ class APIModel extends APIResourceClass
             return false;
         }
 
-        $this->setModelValues($values);
+        foreach ($values as $key => $value) {
+            $this->model->{$key} = $value === 'null' ? null : $value;
+        }
 
         return $this->saveResource();
     }
@@ -317,7 +321,7 @@ class APIModel extends APIResourceClass
 
             // la columna debe existir en el modelo y no estar oculta
             $column = strpos($field, '.') === false ? $field : substr($field, strpos($field, '.') + 1);
-            if (!in_array($column, $allowedFields, true) || $this->isHiddenColumn($column, $hidden)) {
+            if (!in_array($column, $allowedFields, true) || in_array($column, $hidden, true)) {
                 $badFields[] = $field;
                 continue;
             }
@@ -326,22 +330,6 @@ class APIModel extends APIResourceClass
         }
 
         return $where;
-    }
-
-    /**
-     * Indica si la columna está oculta en la API, entera o por contener alguna clave
-     * json oculta (columna.clave). Por esas columnas no se puede filtrar ni ordenar,
-     * porque permitiría deducir el valor oculto.
-     */
-    private function isHiddenColumn(string $column, array $hidden): bool
-    {
-        foreach ($hidden as $field) {
-            if ($field === $column || str_starts_with($field, $column . '.')) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     protected function listAll(): bool
@@ -429,43 +417,6 @@ class APIModel extends APIResourceClass
         return false;
     }
 
-    /**
-     * Asigna al modelo los valores recibidos. Los de los campos numéricos se convierten
-     * al tipo del campo, con las mismas reglas que ModelClass::loadFromData(), para que
-     * un importe vacío o no numérico no llegue como cadena a los cálculos del modelo.
-     * El resto de campos se asignan tal cual.
-     *
-     * @param array $values
-     */
-    private function setModelValues(array $values): void
-    {
-        $fields = $this->model->getModelFields();
-        foreach ($values as $key => $value) {
-            if ($value === 'null') {
-                $this->model->{$key} = null;
-                continue;
-            }
-
-            // comprobamos si el tipo lleva longitud u otros parámetros entre paréntesis
-            $type = $fields[$key]['type'] ?? '';
-            if (str_contains($type, '(')) {
-                $type = substr($type, 0, strpos($type, '('));
-            }
-
-            $isInteger = in_array($type, ['integer', 'int'], true);
-            $isFloat = in_array($type, ['decimal', 'double', 'double precision', 'float'], true);
-            if (false === $isInteger && false === $isFloat) {
-                $this->model->{$key} = $value;
-            } elseif (is_numeric($value)) {
-                $this->model->{$key} = $isInteger ? (int)$value : (float)$value;
-            } elseif ($fields[$key]['is_nullable'] !== 'NO' || ($isInteger && $key === $this->model->primaryColumn())) {
-                $this->model->{$key} = null;
-            } else {
-                $this->model->{$key} = $isInteger ? 0 : 0.0;
-            }
-        }
-    }
-
     private function filterOrder(array $order, array $hidden, array &$badFields = []): array
     {
         $allowedFields = array_keys($this->model->getModelFields());
@@ -486,7 +437,7 @@ class APIModel extends APIResourceClass
             }
 
             $column = strpos($field, '.') === false ? $field : substr($field, strpos($field, '.') + 1);
-            if (!in_array($column, $allowedFields, true) || $this->isHiddenColumn($column, $hidden)) {
+            if (!in_array($column, $allowedFields, true) || in_array($column, $hidden, true)) {
                 $badFields[] = $key;
                 continue;
             }

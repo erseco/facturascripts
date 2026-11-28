@@ -201,17 +201,9 @@ class Login implements ControllerInterface
             return;
         }
 
-        // sin contraseña de base de datos ni clave de recuperación no hay secreto que comprobar
-        $secret = $this->getRecoverySecret();
-        if ('' === $secret) {
-            $this->releaseAttempt($attempt);
-            Tools::log()->warning('login-recovery-pass-needed');
-            return;
-        }
-
         // si la contraseña no es correcta, el intento reservado queda como incidente
-        $dbPassword = (string)$request->input('fsDbPasswd');
-        if (false === hash_equals($secret, $dbPassword)) {
+        $dbPassword = $request->input('fsDbPasswd');
+        if ($dbPassword !== Tools::config('db_pass')) {
             Tools::log()->warning('login-invalid-db-password');
             return;
         }
@@ -332,17 +324,6 @@ class Login implements ControllerInterface
             }
         }
         return $newList;
-    }
-
-    /**
-     * Devuelve el secreto que autoriza el cambio de contraseña desde el login: la contraseña
-     * de la base de datos o, si está vacía, la clave de recuperación (FS_RECOVERY_PASS)
-     * definida en config.php. Devuelve una cadena vacía si no hay ninguna de las dos.
-     */
-    protected function getRecoverySecret(): string
-    {
-        $dbPassword = (string)Tools::config('db_pass', '');
-        return '' !== $dbPassword ? $dbPassword : (string)Tools::config('recovery_pass', '');
     }
 
     protected function getUserList(): array

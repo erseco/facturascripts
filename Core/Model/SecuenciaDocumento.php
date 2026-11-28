@@ -19,7 +19,6 @@
 
 namespace FacturaScripts\Core\Model;
 
-use FacturaScripts\Core\DataSrc\Empresas;
 use FacturaScripts\Core\Template\ModelClass;
 use FacturaScripts\Core\Template\ModelTrait;
 use FacturaScripts\Core\Tools;
@@ -65,7 +64,7 @@ class SecuenciaDocumento extends ModelClass
     public $patron;
 
     /** @var bool Indica si debe validarse la composición del patrón. */
-    private static $pattern_test = true;
+    private static $pattern_test = false;
 
     /** @var string Tipo de documento al que se aplica la secuencia. */
     public $tipodoc;
@@ -145,8 +144,8 @@ class SecuenciaDocumento extends ModelClass
             $this->mantenerfecha = false;
         }
 
-        // si usar huecos es false, tipodoc es FacturaCliente y la empresa de la secuencia es de España, mostramos aviso
-        if (!$this->usarhuecos && 'FacturaCliente' === $this->tipodoc && 'ESP' === Empresas::get($this->idempresa)->codpais) {
+        // si usar huecos es false, tipodoc es FacturaCliente y el país predeterminado es España, mostramos aviso
+        if (!$this->usarhuecos && 'FacturaCliente' === $this->tipodoc && 'ESP' === Tools::settings('default', 'codpais')) {
             Tools::log()->error('use-holes-invoices-esp');
         }
 

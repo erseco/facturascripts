@@ -31,9 +31,7 @@ use FacturaScripts\Core\DataSrc\Users;
 use FacturaScripts\Core\Lib\InvoiceOperation;
 use FacturaScripts\Core\Tools;
 use FacturaScripts\Core\Where;
-use FacturaScripts\Dinamic\Lib\AssetManager;
 use FacturaScripts\Dinamic\Lib\BusinessDocumentGenerator;
-use FacturaScripts\Dinamic\Model\CodigoPostal;
 
 /**
  * Controller for editing models that are related and show
@@ -214,9 +212,6 @@ abstract class ComercialContactController extends EditController
      */
     protected function createContactsView(string $viewName = 'EditDireccionContacto'): EditListView
     {
-        // rellena la ciudad y la provincia a partir del código postal
-        AssetManager::addJs(Tools::config('route') . '/Dinamic/Assets/JS/ZipCodeAutofill.js');
-
         return $this->addEditListView($viewName, 'Contacto', 'addresses-and-contacts', 'fa-solid fa-address-book');
     }
 
@@ -226,12 +221,10 @@ abstract class ComercialContactController extends EditController
      * @param string $viewName
      * @param string $model
      * @param string $label
-     * @param bool $hideLinkField oculta la columna del cliente; pásalo a false cuando el listado
-     *                            mezcle documentos de varios clientes (por ejemplo, en la ficha del agente)
      */
-    protected function createCustomerListView(string $viewName, string $model, string $label, bool $hideLinkField = true): ListView
+    protected function createCustomerListView(string $viewName, string $model, string $label): ListView
     {
-        return $this->createListView($viewName, $model, $label, $this->getCustomerFields(), $hideLinkField);
+        return $this->createListView($viewName, $model, $label, $this->getCustomerFields());
     }
 
     /**
@@ -275,9 +268,8 @@ abstract class ComercialContactController extends EditController
      * @param string $model
      * @param string $label
      * @param array $fields
-     * @param bool $hideLinkField oculta la columna del cliente o proveedor del documento
      */
-    private function createListView(string $viewName, string $model, string $label, array $fields, bool $hideLinkField = true): ListView
+    private function createListView(string $viewName, string $model, string $label, array $fields): ListView
     {
         $view = $this->addListView($viewName, $model, $label, 'fa-regular fa-file')
             ->addOrderBy(['codigo'], 'code')
@@ -285,12 +277,8 @@ abstract class ComercialContactController extends EditController
             ->addOrderBy(['numero'], 'number')
             ->addOrderBy([$fields['numfield']], $fields['numtitle'])
             ->addOrderBy(['total'], 'amount')
-            ->addSearchFields(['codigo', 'observaciones', $fields['numfield']]);
-
-        // en la ficha del cliente o proveedor todos los documentos son suyos, así que ocultamos la columna
-        if ($hideLinkField) {
-            $view->disableColumn($fields['linkfield'], true);
-        }
+            ->addSearchFields(['codigo', 'observaciones', $fields['numfield']])
+            ->disableColumn($fields['linkfield'], true);
 
         $this->addCommonViewFilters($viewName, $model);
 
@@ -394,9 +382,6 @@ abstract class ComercialContactController extends EditController
             case 'edit-file':
                 return $this->editFileAction();
 
-            case 'find-zip-code':
-                return $this->findZipCodeAction();
-
             case 'generate-accounting-entries':
                 return $this->generateAccountingEntriesAction($model, $allowUpdate, $this->dataBase);
 
@@ -420,20 +405,6 @@ abstract class ComercialContactController extends EditController
         }
 
         return parent::execPreviousAction($action);
-    }
-
-    /**
-     * Devuelve, en json, las ciudades y provincias del código postal indicado.
-     */
-    protected function findZipCodeAction(): bool
-    {
-        $this->setTemplate(false);
-        $this->response->json(CodigoPostal::findPlaces(
-            (string)$this->request->input('codpostal', ''),
-            (string)$this->request->input('codpais', '')
-        ));
-
-        return false;
     }
 
     /**

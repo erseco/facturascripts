@@ -340,7 +340,7 @@ class WidgetSelect extends BaseWidget
         $html = '';
         $name = '';
         if ($this->readonly()) {
-            $html .= '<input type="hidden" name="' . $this->fieldname . '" value="' . $this->escapeHtml($this->value) . '">';
+            $html .= '<input type="hidden" name="' . $this->fieldname . '" value="' . $this->value . '">';
         } else {
             $name = $this->multiple
                 ? ' name="' . $this->fieldname . '[]"'
@@ -353,7 +353,7 @@ class WidgetSelect extends BaseWidget
             . ' class="' . $class . '"'
             . $this->inputHtmlExtraParams()
             . ' parent="' . $this->parent . '"'
-            . ' value="' . $this->escapeHtml($this->value) . '"'
+            . ' value="' . $this->value . '"'
             . ' data-field="' . $this->fieldname . '"'
             . ' data-source="' . $this->source . '"'
             . ' data-fieldcode="' . $this->fieldcode . '"'
@@ -392,7 +392,7 @@ class WidgetSelect extends BaseWidget
 
             // Opciones sin grupo primero
             foreach ($ungrouped as $option) {
-                $title = $this->optionTitle($option);
+                $title = empty($option['title']) ? $option['value'] : $option['title'];
                 if ($this->valuesMatch($option['value'], $this->value) && (!$found || $this->multiple)) {
                     $found = true;
                     $html .= '<option value="' . $option['value'] . '" selected>' . $title . '</option>';
@@ -405,7 +405,7 @@ class WidgetSelect extends BaseWidget
             foreach ($grouped as $groupLabel => $options) {
                 $html .= '<optgroup label="' . Tools::noHtml($groupLabel) . '">';
                 foreach ($options as $option) {
-                    $title = $this->optionTitle($option);
+                    $title = empty($option['title']) ? $option['value'] : $option['title'];
                     if ($this->valuesMatch($option['value'], $this->value) && (!$found || $this->multiple)) {
                         $found = true;
                         $html .= '<option value="' . $option['value'] . '" selected>' . $title . '</option>';
@@ -417,7 +417,7 @@ class WidgetSelect extends BaseWidget
             }
         } else {
             foreach ($this->values as $option) {
-                $title = $this->optionTitle($option);
+                $title = empty($option['title']) ? $option['value'] : $option['title'];
 
                 if ($this->valuesMatch($option['value'], $this->value) && (!$found || $this->multiple)) {
                     $found = true;
@@ -432,8 +432,8 @@ class WidgetSelect extends BaseWidget
         // value not found?
         // don't use strict comparison (===)
         if (!$this->multiple && !$found && $this->value != '' && !empty($this->source)) {
-            $html .= '<option value="' . $this->escapeHtml($this->value) . '" selected>'
-                . $this->escapeHtml(static::$codeModel->getDescription($this->source, $this->fieldcode, $this->value, $this->fieldtitle))
+            $html .= '<option value="' . $this->value . '" selected>'
+                . static::$codeModel->getDescription($this->source, $this->fieldcode, $this->value, $this->fieldtitle)
                 . '</option>';
         }
 
@@ -458,21 +458,21 @@ class WidgetSelect extends BaseWidget
             }
 
             $found = true;
-            $title = $this->optionTitle($option);
+            $title = empty($option['title']) ? $option['value'] : $option['title'];
             $html .= '<option value="' . $option['value'] . '" selected>' . $title . '</option>';
         }
 
         // value not found?
         if (!$this->multiple && !$found && $this->value != '' && !empty($this->source)) {
-            return '<option value="' . $this->escapeHtml($this->value) . '" selected>'
-                . $this->escapeHtml(static::$codeModel->getDescription($this->source, $this->fieldcode, $this->value, $this->fieldtitle))
+            return '<option value="' . $this->value . '" selected>'
+                . static::$codeModel->getDescription($this->source, $this->fieldcode, $this->value, $this->fieldtitle)
                 . '</option>';
         }
 
         // A native single select chooses its first option when none matches.
         if (!$this->multiple && !$found && false === empty($this->values)) {
             $option = reset($this->values);
-            $title = $this->optionTitle($option);
+            $title = empty($option['title']) ? $option['value'] : $option['title'];
             $html .= '<option value="' . $option['value'] . '">' . $title . '</option>';
         }
 
@@ -488,20 +488,6 @@ class WidgetSelect extends BaseWidget
         $params .= $this->multiple ? ' multiple' : '';
         $params .= $this->readonly() ? ' disabled' : '';
         return $params;
-    }
-
-    /**
-     * Devuelve el texto de la opción. Si no tiene título, usa su valor.
-     * Un título "0" es válido, por eso no se usa empty().
-     */
-    protected function optionTitle(array $option): string
-    {
-        $title = $option['title'] ?? null;
-        if (null === $title || '' === $title) {
-            return (string)($option['value'] ?? '');
-        }
-
-        return (string)$title;
     }
 
     /**
@@ -601,7 +587,7 @@ class WidgetSelect extends BaseWidget
         if ($this->multiple) {
             $array = [];
             foreach ($this->values as $option) {
-                $title = $this->optionTitle($option);
+                $title = empty($option['title']) ? $option['value'] : $option['title'];
 
                 // don't use strict comparison (===)
                 if (!empty($this->value) && in_array($option['value'], explode(',', $this->value))) {

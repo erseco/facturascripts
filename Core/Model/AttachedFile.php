@@ -70,12 +70,19 @@ class AttachedFile extends ModelClass
 
     public function delete(): bool
     {
-        // onDeleteBefore() consulta las imágenes de productos dentro de la transacción,
-        // donde no se pueden crear tablas: nos aseguramos de que ya existan
-        new ProductoImagen();
+        // eliminamos el archivo, solo si está dentro de MyFiles
+        $fullPath = $this->getFullPath();
+        if (file_exists($fullPath) && $this->isInsideMyFiles($fullPath) && false === unlink($fullPath)) {
+            Tools::log()->warning('cant-delete-file', ['%fileName%' => $this->path]);
+            return false;
+        }
 
-        // eliminamos el registro de la base de datos. El archivo y las relaciones
-        // con los productos se eliminan en onDeleteBefore()
+        // eliminamos las relaciones con los productos
+        foreach (ProductoImagen::allWhereEq('idfile', $this->idfile) as $productoImage) {
+            $productoImage->delete();
+        }
+
+        // eliminamos el registro de la base de datos
         if (false === parent::delete()) {
             return false;
         }
@@ -181,12 +188,8 @@ class AttachedFile extends ModelClass
 
     public function test(): bool
     {
-        // un registro nuevo siempre pasa por setFile(), aunque llegue con un idfile ya asignado:
-        // es lo que valida el path y mueve el archivo a su carpeta definitiva
-        if (empty($this->idfile) || false === $this->exists()) {
-            if (empty($this->idfile)) {
-                $this->idfile = $this->getNextCode();
-            }
+        if (empty($this->idfile)) {
+            $this->idfile = $this->getNextCode();
             return $this->setFile() && parent::test();
         }
 
@@ -264,24 +267,6 @@ class AttachedFile extends ModelClass
             default:
                 return parent::onChange($field);
         }
-    }
-
-    protected function onDeleteBefore(): bool
-    {
-        // eliminamos las relaciones con los productos
-        foreach (ProductoImagen::allWhereEq('idfile', $this->idfile) as $productoImage) {
-            $productoImage->delete();
-        }
-
-        // eliminamos el archivo, solo si está dentro de MyFiles. Lo dejamos para el final
-        // porque es lo único que no se puede deshacer si algo impide la eliminación
-        $fullPath = $this->getFullPath();
-        if (file_exists($fullPath) && $this->isInsideMyFiles($fullPath) && false === unlink($fullPath)) {
-            Tools::log()->warning('cant-delete-file', ['%fileName%' => $this->path]);
-            return false;
-        }
-
-        return parent::onDeleteBefore();
     }
 
     /**

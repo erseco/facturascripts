@@ -17,8 +17,6 @@
 <script>
     let waitCounter = 0;
     let keyupInputName = null;
-    let findProductController = null;
-    let findProductQuery = '';
 
     function changeColumn(btn) {
         $(btn).addClass('active').siblings().removeClass('active');
@@ -94,75 +92,7 @@
         }
 
         event.preventDefault();
-
-        // si se acaba de escribir el código postal, primero buscamos su ciudad y provincia
-        if (event.target.id === 'newCustomerPostalCode' && event.target.dataset.pending === '1') {
-            newCustomerZipCode();
-            return false;
-        }
-
         createCustomerFromSales();
-        return false;
-    }
-
-    function newCustomerZipCode() {
-        // busca el código postal y, si está en la lista, rellena la ciudad y la provincia del nuevo cliente
-        const form = document.forms['salesForm'];
-        const zipInput = form['newcustomer_codpostal'];
-        const zipCode = zipInput.value.trim();
-        delete zipInput.dataset.pending;
-        if (zipCode === '') {
-            return false;
-        }
-
-        let data = new FormData();
-        data.append('action', 'find-zip-code');
-        data.append('codpostal', zipCode);
-        data.append('codpais', form['newcustomer_codpais'].value);
-
-        fetch('{{ fsc.url() }}', {
-            method: 'POST',
-            body: data
-        }).then(function (response) {
-            return response.ok ? response.json() : Promise.reject(response);
-        }).then(function (places) {
-            // sin resultados, o si el código ha cambiado mientras tanto, no tocamos nada
-            if (false === Array.isArray(places) || places.length === 0 || zipInput.value.trim() !== zipCode) {
-                return;
-            }
-
-            // las ciudades encontradas se ofrecen como sugerencias
-            const cityList = document.getElementById('newCustomerCityList');
-            cityList.innerHTML = '';
-            places.forEach(function (place) {
-                const option = document.createElement('option');
-                option.value = place.ciudad;
-                cityList.appendChild(option);
-            });
-
-            // la provincia solo se rellena si es la misma para todas las ciudades
-            const sameProvince = places.every(function (place) {
-                return place.provincia === places[0].provincia;
-            });
-            if (sameProvince) {
-                form['newcustomer_provincia'].value = places[0].provincia;
-            }
-
-            // con una única ciudad la rellenamos; con varias, se elige entre las sugerencias
-            const cityInput = form['newcustomer_ciudad'];
-            const cityFound = places.some(function (place) {
-                return place.ciudad === cityInput.value;
-            });
-            if (places.length === 1) {
-                cityInput.value = places[0].ciudad;
-            } else if (false === cityFound) {
-                cityInput.value = '';
-                cityInput.focus();
-            }
-        }).catch(function (error) {
-            console.error(error);
-        });
-
         return false;
     }
 
@@ -201,21 +131,9 @@
         data.append('data', formDataJsonString);
         console.log(data);
 
-        // si hay una búsqueda de productos sin terminar, la descartamos: solo interesa la última
-        let signal = null;
-        if (action === 'find-product') {
-            if (findProductController !== null) {
-                findProductController.abort();
-            }
-            findProductController = new AbortController();
-            findProductQuery = document.forms['salesForm']['fp_query'].value.trim();
-            signal = findProductController.signal;
-        }
-
         fetch('{{ fsc.url() }}', {
             method: 'POST',
-            body: data,
-            signal: signal
+            body: data
         }).then(function (response) {
             animateSpinner('remove');
             if (response.ok) {
@@ -239,8 +157,6 @@
                 document.getElementById('newCustomerName').closest('.modal-body').querySelectorAll('input').forEach(function (input) {
                     input.value = input.defaultValue;
                 });
-                document.getElementById('newCustomerCityList').innerHTML = '';
-                delete document.getElementById('newCustomerPostalCode').dataset.pending;
             }
             if (data.header !== '') {
                 document.getElementById("salesFormHeader").innerHTML = data.header;
@@ -304,17 +220,8 @@
 
             findProduct();
         }).catch(function (error) {
-            if (error && error.name === 'AbortError') {
-                // búsqueda de productos descartada por otra más reciente, que es la que quita el spinner
-                return;
-            }
-
             console.warn(error);
             animateSpinner('remove', false);
-            if (action === 'find-product') {
-                // la búsqueda ha fallado: permitimos repetirla con el mismo texto
-                findProductQuery = null;
-            }
             if (error && typeof error.text === 'function') {
                 error.text().then(function (body) {
                     alert((error.status ? error.status + ' ' : '') + (body || error.statusText || 'error'));
@@ -352,15 +259,6 @@
         // obtenemos el name del input si cumple la condición de pulsado
         if ($(event.target).is('input') && ['keyup', 'keypress', 'change'].includes(event.type)) {
             keyupInputName = event.target.name;
-        }
-
-        // en el buscador de productos, salvo que se pulse intro, no buscamos si el texto no ha cambiado
-        // (flechas, mayúsculas, etc.) ni con un solo carácter
-        if (action === 'find-product' && event.target && event.target.name === 'fp_query' && event.key !== 'Enter') {
-            const query = event.target.value.trim();
-            if (query === findProductQuery || query.length === 1) {
-                return false;
-            }
         }
 
         console.log('waitNum: ' + waitNum);

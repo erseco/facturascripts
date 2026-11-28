@@ -83,7 +83,23 @@ trait InvoiceTrait
             return false;
         }
 
-        // los recibos y la contabilidad se eliminan en onDeleteBefore()
+        // eliminamos los recibos
+        foreach ($this->getReceipts() as $receipt) {
+            $receipt->disableInvoiceUpdate(true);
+            if (false === $receipt->delete()) {
+                Tools::log()->warning('cant-remove-receipt');
+                return false;
+            }
+        }
+
+        // eliminamos la contabilidad
+        $acEntry = $this->getAccountingEntry();
+        $acEntry->editable = true;
+        if ($acEntry->exists() && false === $acEntry->delete()) {
+            Tools::log()->warning('cant-remove-accounting-entry');
+            return false;
+        }
+
         return parent::delete();
     }
 
@@ -129,13 +145,9 @@ trait InvoiceTrait
             || $this->getSerie()->tipo === 'R';
     }
 
-    /**
-     * Indica si la factura está pagada. Una factura con la columna pagada a NULL
-     * (facturas antiguas o importadas) se considera no pagada.
-     */
     public function paid(): bool
     {
-        return (bool)$this->pagada;
+        return $this->pagada;
     }
 
     /**
@@ -209,29 +221,6 @@ trait InvoiceTrait
         }
 
         return true;
-    }
-
-    protected function onDeleteBefore(): bool
-    {
-        // eliminamos los recibos y la contabilidad aquí, y no en delete(),
-        // para que se ejecuten antes las extensiones deleteBefore
-        foreach ($this->getReceipts() as $receipt) {
-            $receipt->disableInvoiceUpdate(true);
-            if (false === $receipt->delete()) {
-                Tools::log()->warning('cant-remove-receipt');
-                return false;
-            }
-        }
-
-        // eliminamos la contabilidad
-        $acEntry = $this->getAccountingEntry();
-        $acEntry->editable = true;
-        if ($acEntry->exists() && false === $acEntry->delete()) {
-            Tools::log()->warning('cant-remove-accounting-entry');
-            return false;
-        }
-
-        return parent::onDeleteBefore();
     }
 
     protected function onChangeTotal(): bool

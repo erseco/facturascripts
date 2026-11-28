@@ -87,17 +87,9 @@ class EditAgente extends ComercialContactController
             ->setSettings('btnNew', false);
     }
 
-    /**
-     * Crea la pestaña de un tipo de documento de venta del agente (albaranes, pedidos o presupuestos).
-     * Los documentos pueden ser de clientes distintos, por eso se mantiene la columna del cliente.
-     *
-     * @param string $viewName
-     * @param string $model
-     * @param string $label
-     */
     protected function createDocumentView(string $viewName, string $model, string $label): void
     {
-        $this->createCustomerListView($viewName, $model, $label, false)
+        $this->createCustomerListView($viewName, $model, $label)
             ->setSettings('btnPrint', true)
             ->setSettings('group', 'sales');
 
@@ -120,15 +112,9 @@ class EditAgente extends ComercialContactController
             ->setSettings('btnNew', false);
     }
 
-    /**
-     * Crea la pestaña de facturas de venta del agente.
-     * Las facturas pueden ser de clientes distintos, por eso se mantiene la columna del cliente.
-     *
-     * @param string $viewName
-     */
     protected function createInvoiceView(string $viewName): void
     {
-        $this->createCustomerListView($viewName, 'FacturaCliente', 'invoices', false)
+        $this->createCustomerListView($viewName, 'FacturaCliente', 'invoices')
             ->setSettings('btnPrint', true)
             ->setSettings('group', 'sales');
 
